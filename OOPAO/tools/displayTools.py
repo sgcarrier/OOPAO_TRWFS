@@ -69,9 +69,14 @@ def displayMap(A,norma=False,axis=2,mask=0,returnOutput = False):
                     tmp = tmp/np.max(np.abs(tmp))
                 S[ i*(nPix1-1) : nPix1 +i*(nPix1-1) , j*(nPix2-1) : nPix2 +j*(nPix2-1)] = tmp
     
-    
-    plt.figure()
-    plt.imshow(S)
+
+    maxValue = np.max(S)
+    minValue = np.min(S)
+
+    fig = plt.figure()
+    fig.suptitle(f"Bases used for the interaction matrix\nMax: {maxValue:.2f} nm, Min: {minValue:.2f} nm", fontsize=18)
+    img_plt = plt.imshow(S)
+    plt.colorbar(img_plt)
     if returnOutput:
         return S
 

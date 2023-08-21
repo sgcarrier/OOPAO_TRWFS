@@ -17,6 +17,7 @@ class Detector:
         self.readoutNoise=readoutNoise
         self.photonNoise=photonNoise        
         self.frame=np.zeros([nRes,nRes])
+        self.cube = None
         self.tag='detector'        
         
     def rebin(self,arr, new_shape):

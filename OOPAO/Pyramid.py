@@ -156,9 +156,12 @@ class Pyramid:
         self.backgroundNoise            = False                                             # background noise in photon 
         self.binning                    = binning                                           # binning factor for the detector
         self.old_mask                   = old_mask
-        self.random_state_photon_noise  = np.random.RandomState(seed=int(time.time()))      # random states to reproduce sequences of noise 
-        self.random_state_readout_noise = np.random.RandomState(seed=int(time.time()))      # random states to reproduce sequences of noise 
-        self.random_state_background    = np.random.RandomState(seed=int(time.time()))      # random states to reproduce sequences of noise 
+        self.random_state_photon_noise  = np.random.default_rng(seed=int(time.time())) #np.random.RandomState(seed=int(time.time()))      # random states to reproduce sequences of noise
+        self.random_state_readout_noise = np.random.default_rng(seed=int(time.time()))      # random states to reproduce sequences of noise
+        self.random_state_background    = np.random.default_rng(seed=int(time.time()))      # random states to reproduce sequences of noise
+        # self.random_state_photon_noise  = np.random.RandomState(seed=100)      # random states to reproduce sequences of noise
+        # self.random_state_readout_noise = np.random.RandomState(seed=100)      # random states to reproduce sequences of noise
+        # self.random_state_background    = np.random.RandomState(seed=100)      # random states to reproduce sequences of noise
         self.user_modulation_path       = user_modulation_path                              # user defined modulation path
         self.pupilSeparationRatio       = pupilSeparationRatio                              # Separation ratio of the PWFS pupils (Diameter/Distance Center to Center) -- DEPRECIATED -> use n_pix_separation instead)
         self.weight_vector = None
@@ -212,10 +215,11 @@ class Pyramid:
         self.tag                        = 'pyramid'                                                          # Tag of the object 
         self.cam                        = Detector(round(nSubap*self.zeroPaddingFactor))                     # WFS detector object
         self.lightRatio                 = lightRatio + 0.001                                                 # Light ratio for the valid pixels selection 23/09/2022 cth: 0.001 added for backward compatibility
-        if calibModulation>= self.telescope.resolution/2:
-            self.calibModulation            = self.telescope.resolution/2 -1
-        else:                                             
-            self.calibModulation = calibModulation  # Modulation used for the valid pixel selection
+        # if calibModulation>= self.telescope.resolution/2:
+        #     self.calibModulation            = self.telescope.resolution/2 -1
+        # else:
+        #     self.calibModulation = calibModulation  # Modulation used for the valid pixel selection
+        self.calibModulation = calibModulation                      # S.C. need to try 50.0
         self.isInitialized              = False                                                              # Flag for the initialization of the WFS
         self.isCalibrated               = False                                                              # Flag for the initialization of the WFS
         self.delta_Tip                  = 0                                                                  # delta Tip for the modulation
@@ -251,7 +255,7 @@ class Pyramid:
         self.mask_computation()
         
         # initialize the reference slopes and units 
-        self.slopesUnits                = 1     
+        self.slopesUnits                = 1
         self.referenceSignal            = 0
         self.referenceSignal_2D         = 0
         self.referencePyramidFrame      = 0 
@@ -273,8 +277,8 @@ class Pyramid:
     def mask_computation(self):
         print('Pyramid Mask initialization...')
         if self.old_mask is False:
-            self.m              = self.get_phase_mask(resolution = self.nRes,n_subap = self.nSubap, n_pix_separation = self.n_pix_separation, n_pix_edge = self.n_pix_edge, psf_centering = self.psfCentering, sx = self.sx, sy = self.sy)  
-            self.initial_m      = self.m.copy()   
+            self.m              = self.get_phase_mask(resolution = self.nRes,n_subap = self.nSubap, n_pix_separation = self.n_pix_separation, n_pix_edge = self.n_pix_edge, psf_centering = self.psfCentering, sx = self.sx, sy = self.sy)
+            self.initial_m      = self.m.copy()
             self.mask           = self.convert_for_gpu(np.complex64(np.exp(1j*self.m)))                                    # compute the PWFS mask)
             self.initial_mask   = np.copy(self.mask)                      # Save a copy of the initial mask
         else:
@@ -866,8 +870,9 @@ class Pyramid:
     @modulation.setter
     def modulation(self,val):
         self._modulation = val
-        if self._modulation>=(self.telescope.resolution//2):
-            raise ValueError('Error the modulation radius is too large for this resolution! Consider using a larger telescope resolution!')
+        # S.C. Need to test with modulation 50
+        # if self._modulation>=(self.telescope.resolution//2):
+        #     raise ValueError('Error the modulation radius is too large for this resolution! Consider using a larger telescope resolution!')
         if val !=0:
             self.modulation_path = []
             if self.user_modulation_path is not None:
