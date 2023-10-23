@@ -11,31 +11,53 @@ import matplotlib.pyplot as plt
 import numpy as np
 
 from .Source import Source
+from OOPAO.tools import *
 
 # %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% CLASS INITIALIZATION %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 class Telescope:
     
-    def __init__(self,resolution, diameter,samplingTime=0.001,centralObstruction = 0,fov = 0,pupil=None,pupilReflectivity=1,display_optical_path= False):
-        """
-        ************************** REQUIRED PARAMETERS **************************
-        
-        A Telescope object consists in defining the 2D mask of the entrance pupil. It is mainly characterised by two parameters 
-        _ resolution            : the resolution of the pupil mask
-        _ diameter              : The physical diameter of the telescope in [m]
-        
-        If no pupil mask is input, the default pupil geometry is circular.
-        
-        ************************** OPTIONAL PARAMETERS **************************
-        
-        _ samplingTime          : Defines the frequency of the AO loop. It is used in the Atmosphere object to update the turbulence phase screens according to the wind speed. 
-        _ centralObstruction    : Adds a central obstruction in percentage of diameter. 
-        _ fov                   : Defines the Field of View of the Telescope object. This will be useful for off-axis targets but it hasn't been properly implemented yet.
-        _ pupil                 : A user-defined pupil mask can be input to the Telescope object. It should consist of a binary array. 
-        _ pupilReflectivcty     : Defines the reflectivity of the Telescope object. If not set to 1, it can be input as a 2D map of uneven reflectivy correspondong to the pupil mask. 
-                                  This property can be set after the initialization of the Telescope object.
-        The main properties of the object can be displayed using :
-            tel.print_properties()      
-                                  
+    def __init__(self,resolution:float, diameter:float,samplingTime:float=0.001,centralObstruction:float = 0,fov:float = 0,\
+                 pupil:bool=None,pupilReflectivity:float=1,display_optical_path:bool = False):
+        """TELESCOPE
+        A Telescope object consists in defining the 2D mask of the entrance pupil.
+        The Telescope is a central object in OOPAO:
+            A source object is associated to the Telescope that carries the flux and wavelength information. 
+            An Atmosphere object can be paired to the Telescope to propagate the light through turbulent phase screens.
+            The Telescope is required to initialize many of the OOPAO classes as it carries the pupil definition and pixel size. 
+
+        Parameters
+        ----------
+        resolution : float
+            The resolution of the pupil mask.
+        diameter : float
+            The physical diameter of the telescope in [m].
+        samplingTime : float, optional
+            Defines the frequency of the AO loop. It is used in the Atmosphere object 
+            to update the turbulence phase screens according to the wind speed.
+            The default is 0.001.
+        centralObstruction : float, optional
+            Adds a central obstruction in percentage of diameter.
+            The default is 0.
+        fov : float, optional
+            Defines the Field of View of the Telescope object. 
+            This is useful for off-axis targets but it hasn't been properly implemented yet.
+            The default is 0.
+        pupil : bool, optional
+            A user-defined pupil mask can be input to the Telescope object. It should consist of a binary array. 
+            The default is None.
+        pupilReflectivity : float, optional
+            Defines the reflectivity of the Telescope object. 
+            If not set to 1, it can be input as a 2D map of uneven reflectivy correspondong to the pupil mask.
+            The default is 1.
+        display_optical_path : bool, optional
+            If desired, the optical path can be printed at each time the light is propagated to a WFS object 
+            setting the display_optical_path property to True.
+            The default is False.
+
+        Returns
+        -------
+        None.
+   
         ************************** ADDING SPIDERS *******************************
         It is possible to add spiders to the telescope pupil using the following property: 
             
@@ -108,23 +130,9 @@ class Telescope:
         self.isPetalFree                 = False                     # Flag to remove the petalling effect with ane ELT system. 
         self.index_pixel_petals          = None                      # indexes of the pixels corresponfong to the M1 petals. They need to be set externally
         self.optical_path                = None                      # indexes of the pixels corresponfong to the M1 petals. They need to be set externally
-
-#        Case where the pupil is not input: circular pupil with central obstruction    
-        if pupil is None:
-            D           = self.resolution+1
-            x           = np.linspace(-self.resolution/2,self.resolution/2,self.resolution)
-            xx,yy       = np.meshgrid(x,x)
-            circle      = xx**2+yy**2
-            obs         = circle>=(self.centralObstruction*D/2)**2
-            self.pupil  = circle<(D/2)**2 
-            self.pupil  = self.pupil*obs
-        else:
-            print('User-defined pupil, the central obstruction will not be taken into account...')
-            self.pupil  = pupil        
-            
-        self.pupilReflectivity           = self.pupil.astype(float)*pupilReflectivity                   # A non uniform reflectivity can be input by the user
-        self.pixelArea                   = np.sum(self.pupil)                                           # Total number of pixels in the pupil area
-        self.pupilLogical                = np.where(np.reshape(self.pupil,resolution*resolution)>0)     # index of valid pixels in the pupil
+        self.user_defined_pupil          = pupil
+        self.pupilReflectivity           = pupilReflectivity
+        self.set_pupil()
         self.src                         = None                                               # temporary source object associated to the telescope object
         self.OPD                         = self.pupil.astype(float)                                     # set the initial OPD
         self.OPD_no_pupil                = 1+self.pupil.astype(float)*0                                     # set the initial OPD
@@ -138,7 +146,27 @@ class Telescope:
         self.isInitialized= True
 # %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% PSF COMPUTATION %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% 
 
-    def computeCoronoPSF(self,zeroPaddingFactor=2, display = False):
+    def set_pupil(self):
+    #        Case where the pupil is not input: circular pupil with central obstruction    
+        if self.user_defined_pupil is None:
+            D           = self.resolution+1
+            x           = np.linspace(-self.resolution/2,self.resolution/2,self.resolution)
+            xx,yy       = np.meshgrid(x,x)
+            circle      = xx**2+yy**2
+            obs         = circle>=(self.centralObstruction*D/2)**2
+            self.pupil  = circle<(D/2)**2 
+            self.pupil  = self.pupil*obs
+        else:
+            print('User-defined pupil, the central obstruction will not be taken into account...')
+            self.pupil  = self.user_defined_pupil.copy()        
+            
+        self.pupilReflectivity           = self.pupil.astype(float)*self.pupilReflectivity                   # A non uniform reflectivity can be input by the user
+        self.pixelArea                   = np.sum(self.pupil)                                           # Total number of pixels in the pupil area
+        self.pupilLogical                = np.where(np.reshape(self.pupil,self.resolution*self.resolution)>0)     # index of valid pixels in the pupil
+    def computeCoronoPSF(self,zeroPaddingFactor=2, display = False, coronagraphDiameter = 4.5):
+
+        # coronagraphDiameter is the FPM diameter in L/D of imaging wavelength
+
         if self.src is None:
             raise AttributeError('The telescope was not coupled to any source object! Make sure to couple it with an src object using src*tel')            # number of pixel considered 
         N       = int(zeroPaddingFactor * self.resolution)        
@@ -148,18 +176,22 @@ class Telescope:
         xxc = xx - (N-1)/2
         yyc = yy - (N-1)/2
 
-        coronagraphDiameter = 4.5 # diameter in L/D of imaging wavelength (same as wfs for now)
         self.pupilPadded = np.sqrt(xxc**2 + yyc**2) < self.resolution/2
         self.pupilSpiderPadded = np.zeros((N,N))
         self.pupilSpiderPadded[center-self.resolution//2:center+self.resolution//2,center-self.resolution//2:center+self.resolution//2] = self.pupil
         self.focalMask = np.sqrt(xxc**2 + yyc**2) > coronagraphDiameter/2 * zeroPaddingFactor
         self.apodizer  = self.pupilPadded
         self.lyotStop  = (np.sqrt((xxc-1.0)**2 + (yyc-1.0)**2) < self.resolution/2 * 0.9) * self.pupilSpiderPadded
+        self.diffraction2meterGEO = self.src.wavelength/self.D * 36e6 # assumes GEO orbit 36 000 km
 
         phase = self.src.phase
         amp_mask = 1
 
-        # axis in arcsec
+        # axis limits in meters at GEO orbit
+        self.xPSF_mGEO         = [-self.resolution /2 * self.diffraction2meterGEO, self.resolution/2 * self.diffraction2meterGEO]
+        self.yPSF_mGEO         = [-self.resolution /2 * self.diffraction2meterGEO, self.resolution/2 * self.diffraction2meterGEO]
+
+        # axis in arcsec => BUG ? Assumes Shannon sampling only ?
         self.xPSF_arcsec       = [-206265*(self.src.wavelength/self.D) * (self.resolution/2), 206265*(self.src.wavelength/self.D) * (self.resolution/2)]
         self.yPSF_arcsec       = [-206265*(self.src.wavelength/self.D) * (self.resolution/2), 206265*(self.src.wavelength/self.D) * (self.resolution/2)]
         
@@ -256,20 +288,25 @@ class Telescope:
         self.PSF_norma_zoom  = self.PSF_norma[N_crop:-N_crop,N_crop:-N_crop]
     
 # %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% PSF DISPLAY %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% 
-    def showPSF(self,zoom = 1):
+    def showPSF(self,zoom = 1, GEO = False):
         # display the full PSF or zoom on the core of the PSF
         if hasattr(self, 'PSF'): 
             print('Displaying the PSF...')
         else:
             self.computePSF(6)
             print('Displaying the PSF...')
-
         if zoom:
             plt.imshow(self.PSF_trunc,extent = [self.xPSF_trunc[0],self.xPSF_trunc[1],self.xPSF_trunc[0],self.xPSF_trunc[1]])
+            plt.xlabel('[arcsec]')
+            plt.ylabel('[arcsec]')
+        elif GEO == True: # works only with zoom = False
+            plt.imshow(np.log(self.PSFc),extent = [self.xPSF_mGEO[0],self.xPSF_mGEO[1],self.xPSF_mGEO[0],self.xPSF_mGEO[1]])
+            plt.xlabel('[meters in GEO orbit]')
+            plt.ylabel('[meters in GEO orbit]')
         else:
             plt.imshow(self.PSF,extent = [self.xPSF[0],self.xPSF[1],self.xPSF[0],self.xPSF[1]])
-        plt.xlabel('[arcsec]')
-        plt.ylabel('[arcsec]')
+            plt.xlabel('[arcsec]')
+            plt.ylabel('[arcsec]')
 
 # %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% TELESCOPE PROPERTIES %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% 
 
@@ -450,12 +487,15 @@ class Telescope:
     def resetOPD(self):
         # re-initialize the telescope OPD to a flat wavefront
         if self.src is not None:
-            self.optical_path = [[self.src.type + '('+self.src.optBand+')', id(self.src)]]
-            self.optical_path.append([self.tag,id(self)])
+
             if self.src.tag == 'asterism':
+                self.optical_path = [[self.src.type, id(self.src)]]
+                self.optical_path.append([self.tag,id(self)])
                 self.OPD = [self.pupil.astype(float) for i in range(self.src.n_source)]
                 self.OPD_no_pupil = [self.pupil.astype(float)*0 +1 for i in range(self.src.n_source)]
             else:
+                self.optical_path = [[self.src.type + '('+self.src.optBand+')', id(self.src)]]
+                self.optical_path.append([self.tag,id(self)])
                 self.OPD = 0*self.pupil.astype(float)
                 self.OPD_no_pupil = 0*self.pupil.astype(float)
                 
@@ -471,36 +511,45 @@ class Telescope:
             print('No light propagated through the telescope')      
                 
     def apply_spiders(self,angle,thickness_spider,offset_X = None, offset_Y=None):
-        pup = np.copy(self.pupil)
-        max_offset = self.centralObstruction*self.D/2 - thickness_spider/2
-        if offset_X is None:
-            offset_X = np.zeros(len(angle))
-            
-        if offset_Y is None:
-            offset_Y = np.zeros(len(angle))
-                    
-        if np.max(np.abs(offset_X))>=max_offset or np.max(np.abs(offset_Y))>max_offset:
-            print('WARNING ! The spider offsets are too large! Weird things could happen!')
-        for i in range(len(angle)):
-            angle_val = (angle[i]+90)%360
-            x = np.linspace(-self.D/2,self.D/2,self.resolution)
-            [X,Y] = np.meshgrid(x,x)
-            X+=offset_X[i]
-            Y+=offset_Y[i]
-
-            map_dist = np.abs(X*np.cos(np.deg2rad(angle_val)) + Y*np.sin(np.deg2rad(-angle_val)))
+        self.isInitialized = False
+        if thickness_spider >0:
+            self.set_pupil()
+            pup = np.copy(self.pupil)
+            max_offset = self.centralObstruction*self.D/2 - thickness_spider/2
+            if offset_X is None:
+                offset_X = np.zeros(len(angle))
+                
+            if offset_Y is None:
+                offset_Y = np.zeros(len(angle))
+                        
+            if np.max(np.abs(offset_X))>=max_offset or np.max(np.abs(offset_Y))>max_offset:
+                print('WARNING ! The spider offsets are too large! Weird things could happen!')
+            for i in range(len(angle)):
+                angle_val = (angle[i]+90)%360
+                x = np.linspace(-self.D/2,self.D/2,self.resolution)
+                [X,Y] = np.meshgrid(x,x)
+                X+=offset_X[i]
+                Y+=offset_Y[i]
     
-            if 0<=angle_val<90:
-                map_dist[:self.resolution//2,:] = thickness_spider
-            if 90<=angle_val<180:
-                map_dist[:,:self.resolution//2] = thickness_spider
-            if 180<=angle_val<270:
-                map_dist[self.resolution//2:,:] = thickness_spider
-            if 270<=angle_val<360:
-                map_dist[:,self.resolution//2:] = thickness_spider                
-            pup*= map_dist>thickness_spider/2
+                map_dist = np.abs(X*np.cos(np.deg2rad(angle_val)) + Y*np.sin(np.deg2rad(-angle_val)))
+        
+                if 0<=angle_val<90:
+                    map_dist[:self.resolution//2,:] = thickness_spider
+                if 90<=angle_val<180:
+                    map_dist[:,:self.resolution//2] = thickness_spider
+                if 180<=angle_val<270:
+                    map_dist[self.resolution//2:,:] = thickness_spider
+                if 270<=angle_val<360:
+                    map_dist[:,self.resolution//2:] = thickness_spider                
+                pup*= map_dist>thickness_spider/2
+            self.isInitialized = True
+
+            self.pupil = pup.copy()
             
-        self.pupil = pup
+        else:
+            print('Thickness is <=0, returning default pupil')
+            self.set_pupil()
+
         return 
     
     def removePetalling(self,image = None):
@@ -576,12 +625,15 @@ class Telescope:
     # Combining with an atmosphere object
     def __add__(self,obj):
         if obj.tag == 'atmosphere':
-            self.optical_path =[[self.src.type + '('+self.src.optBand+')',id(self.src)]]
-            self.optical_path.append([obj.tag,id(obj)])
-            self.optical_path.append([self.tag,id(self)])
-            self.isPaired   = True
-            self.OPD  = obj.OPD.copy()
-            self.OPD_no_pupil  = obj.OPD_no_pupil.copy()
+            # obj.set_pupil_footprint()
+            # self.optical_path =[[self.src.type + '('+self.src.optBand+')',id(self.src)]]
+            # self.optical_path.append([obj.tag,id(obj)])
+            # self.optical_path.append([self.tag,id(self)])
+            # self.isPaired   = True
+            obj*self
+
+            # self.OPD  = obj.OPD.copy()
+            # self.OPD_no_pupil  = obj.OPD_no_pupil.copy()
 
             if self.isPetalFree:
                     self.removePetalling()  
@@ -642,5 +694,7 @@ class Telescope:
             
 
 
-
+    def __repr__(self):
+        self.print_properties()
+        return ' '
 

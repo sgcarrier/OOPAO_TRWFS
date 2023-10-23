@@ -13,9 +13,158 @@ import jsonpickle
 import numpy as np
 import skimage.transform as sk
 from astropy.io import fits as pfits
+from OOPAO.tools import *
+import matplotlib.pyplot as plt
 
 
 #%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% USEFUL FUNCTIONS %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+
+def crop(imageArray, size, axis, maximum = 0):
+    """
+    
+
+    Parameters
+    ----------
+    imageArray : TYPE
+        DESCRIPTION.
+    size : TYPE
+        DESCRIPTION.
+    axis : TYPE
+        DESCRIPTION.
+    maximum : TYPE, optional
+        DESCRIPTION. The default is 0.
+
+    Returns
+    -------
+    TYPE
+        DESCRIPTION.
+
+    """
+    # returns an subimage centered on CENTER (assumed to be the center of image), 
+    # of size SIZE (integer), 
+    # considering any datacube IMAGEARRAY (np array) of size NxMxL
+    if imageArray.ndim == 2:
+        sizeImage = imageArray.shape[0]
+        center = np.array((sizeImage//2, sizeImage//2))
+        if maximum == 1:
+            center = np.int16(centroid(imageArray)) + np.int16(sizeImage/2)
+            print(center)
+        return imageArray[center[1]-size//2:center[1]+size//2,center[0]-size//2:center[0]+size//2]
+
+    if imageArray.ndim == 3:
+        if axis == 0:
+            sizeImage = imageArray.shape[1]
+            center = np.array((sizeImage//2, sizeImage//2))
+            return imageArray[:,center[0]-size//2:center[0]+size//2,center[1]-size//2:center[1]+size//2]
+        if axis == 1:
+            sizeImage = imageArray.shape[0]
+            center = np.array((sizeImage//2, sizeImage//2))
+            return imageArray[center[0]-size//2:center[0]+size//2,:,center[1]-size//2:center[1]+size//2]
+        if axis == 2:
+            sizeImage = imageArray.shape[0]
+            center = np.array((sizeImage//2, sizeImage//2))
+            return imageArray[center[0]-size//2:center[0]+size//2,center[1]-size//2:center[1]+size//2, :]
+
+def zero_pad_array(array,padding:int):
+    """
+    
+
+    Parameters
+    ----------
+    array : TYPE
+        DESCRIPTION.
+    padding : int
+        DESCRIPTION.
+
+    Raises
+    ------
+    ValueError
+        DESCRIPTION.
+
+    Returns
+    -------
+    support : TYPE
+        DESCRIPTION.
+
+    """
+    if np.ndim(array)!=2:
+        raise ValueError('Input array should be of shape 2D')
+    else:
+        support = np.zeros([int(2*padding + array.shape[0]),int(2*padding + array.shape[1])],dtype =array.dtype )
+        center_x = support.shape[0]//2
+        center_y = support.shape[1]//2
+        support[center_x-array.shape[0]//2:center_x+array.shape[0]//2,center_y-array.shape[1]//2:center_y+array.shape[1]//2] = array.copy()
+        return support
+    # else:
+    #     if axis is None or len(axis)!=0:
+    #         raise ValueError('The axis on which the padding should be applied is not specified or not properly set, specify 2 axis aver which apply the padding. For instance, axis = [0,1] to pad the 2 first dimensions')
+    #     else: 
+    #         if axis == [0,1]:
+    #             np.tile(array[])
+    #         elif
+            
+                
+                
+    
+    
+
+
+def strehlMeter(PSF, tel, zeroPaddingFactor = 2, display = True, title = ''):
+    # Measures the Strehl ratio from a focal plane image PSF
+    # Method : compute the ratio of the OTF on the OTF of Airy pattern
+    # Airy pattern is computed from tel.pupil function, with a sampling of zeroPaddingFactor
+    
+    # Compute Airy pattern : zero OPD PSF from tel objet
+    tel.resetOPD()
+    tel.computePSF(zeroPaddingFactor)    
+    Airy = tel.PSF
+    sizeAiry = Airy.shape[0]
+    sizePSF  = PSF.shape[0]
+    sizeMin  = np.min((sizeAiry, sizePSF))
+    Airy = crop(Airy, np.int16(sizeMin), axis = 3)
+    PSF  = crop(PSF,  np.int16(sizeMin), axis = 3)
+        
+    # Compute OTF for PSF and Airy
+    OTF  = np.abs(np.fft.fftshift(np.fft.fft2(PSF)))
+    OTFa = np.abs(np.fft.fftshift(np.fft.fft2(Airy)))
+    OTF = OTF / np.max(OTF)
+    OTFa = OTFa / np.max(OTFa)
+    # Compute intensity profiles
+    profile  = circularProfile(OTF)
+    profilea = circularProfile(OTFa)
+    profilea = profilea / np.max(profilea)
+    profile  = profile / np.max(profile)
+    profilea = profilea[0:np.int64(tel.resolution * zeroPaddingFactor/2)]
+    profile  = profile[0:np.int64(tel.resolution * zeroPaddingFactor/2)]
+
+    if display:        
+        # plot OTF profiles for visualization
+        plt.figure()
+        xArray  = np.linspace(0,1, np.int64(tel.resolution * zeroPaddingFactor/2))
+        plt.semilogy(xArray, profile, label = 'OTF', linewidth = '2')
+        plt.semilogy(xArray, profilea, label = 'Perfect OTF')
+        plt.title(title + ' Strehl ' + str(np.round(np.sum(OTF) / np.sum(OTFa) * 100, 1)))
+        plt.legend()
+        plt.ylim((1e-4,1))
+        plt.xlim((0, 1))
+        plt.xlabel('Spatial frequency in the pupil [D/Lambda]', fontsize = 15)
+        plt.ylabel('OTF profile [normalized to peak]', fontsize = 15)
+        plt.pause(0.01)
+        plt.show()
+        
+        # plt.yscale('log')
+        # plt.imshow(tel.pupil, extent = [0.6, 0.8, 0.6, 0.8])
+        # plt.text(0.65,0.575, 'Pupil')
+        # plt.imshow(np.log(crop(PSF, np.int16(8 * zeroPaddingFactor), 3, 1)), extent = [0.75, 0.95, 0.3, 0.5])
+        # plt.text(0.8,0.275, 'PSF')
+        # plt.imshow(np.log(crop(Airy, np.int16(8 * zeroPaddingFactor), 3)), extent = [0.5, 0.7, 0.3, 0.5])
+        # plt.text(0.55,0.275, 'Airy')
+        # plt.title('Strehl ' + np.str_(round(np.sum(OTF) / np.sum(OTFa) * 100)) + '%')
+    print('Strehl ratio [%] : ', np.sum(OTF) / np.sum(OTFa) * 100)
+    return np.sum(OTF) / np.sum(OTFa) * 100
+
+        
 def print_(input_text,condition):
     if condition:
         print(input_text)
@@ -228,8 +377,8 @@ def compute_fourier_mode(pupil,spatial_frequency,angle_deg,zeropadding = 2):
     
     return mode
 
-#%%
-def circularProfile(img):
+
+def circularProfile(img, maximum = False):
     # Compute circular average profile from an image, reference to center of image
     # Get image parameters
     a = img.shape[0]
@@ -237,6 +386,13 @@ def circularProfile(img):
     # Image center
     cen_x = a//2
     cen_y = b//2
+
+    if maximum == True:
+        cogMaximum = centroid(img,threshold = 0.1*img.max())
+        cen_x = cogMaximum[0] + a/2
+        cen_y = cogMaximum[1] + b/2
+        print('Maximum position = [px]')
+        print(cen_x, cen_y)
     # Find radial distances
     [X, Y] = np.meshgrid(np.arange(b) - cen_x, np.arange(a) - cen_y)
     R = np.sqrt(np.square(X) + np.square(Y))

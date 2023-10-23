@@ -48,38 +48,86 @@ except:
 #             mkl_set_num_threads = None
 class Pyramid:
 # %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% CLASS INITIALIZATION %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% 
-    def __init__(self,nSubap,telescope,modulation,lightRatio, postProcessing='slopesMaps',psfCentering=True, n_pix_separation = 2, calibModulation=50, n_pix_edge=None,extraModulationFactor=0,zeroPadding=None,pupilSeparationRatio=None,edgePixel = None,binning =1,nTheta_user_defined=None,userValidSignal=None,old_mask=False,rooftop = None,delta_theta = 0, user_modulation_path = None):
-        """
+    def __init__(self,nSubap:float,telescope,modulation:float,lightRatio:float, postProcessing:str='slopesMaps',\
+                 psfCentering:bool = True, n_pix_separation:float = 2, calibModulation:float = 50, n_pix_edge:float = None,\
+                 extraModulationFactor:int = 0,zeroPadding:int = None, binning:int = 1,nTheta_user_defined:int = None,\
+                 userValidSignal:bool=None,old_mask:bool=False,rooftop:str = None,delta_theta:float = 0, user_modulation_path:list = None,\
+                 pupilSeparationRatio:float = None, edgePixel:int = None):
+        """ PYRAMID
         A Pyramid object consists in defining a 2D phase mask located at the focal plane of the telescope to perform the Fourier Filtering of the EM-Field. 
         By default the Pyramid detector is considered to be noise-free (for calibration purposes). These properties can be switched on and off on the fly (see properties)
-        ************************** REQUIRED PARAMETERS **************************
-        It requires the following parameters: 
-        _ nSubap                : the number of subapertures (ie the diameter of the Pyramid Pupils in pixels)
-        _ telescope             : the telescope object to which the Pyramid is associated. This object carries the phase, flux and pupil information
-        _ modulation            : the Tip-Tilt modulation in [lambda/D] where lambda is the NGS wavelength and D the telescope diameter
-        _ lightRatio            : criterion to select the valid subaperture based on flux considerations
-        _ n_pix_separation      : number of pixels separating the Pyramid Pupils in number of pixels of the detector    -- default value is 2 pixels
-        _ n_pix_edge            : number of pixel at the edge of the Pyramid Pupils in number of pixels of the detector -- default value is n_pix_separation's value
-        _ postProcessing        : processing of the signals ('fullFrame','slopesMaps','fullFrame_incidence_flux','slopesMaps_incidence_flux')                               -- default value is 'slopesMaps'
         
-        DEPRECIATED PARAMETERS:
-        _ pupilSeparationRatio  : Separation ratio of the PWFS pupils (Diameter/Distance Center to Center) -- DEPRECIATED -> use n_pix_separation instead)
-        _ edgePixel             : number of pixel at the edge of the Pyramid Pupils
-        
-        ************************** OPTIONAL PARAMETERS **************************
-        
-        _ calibModulation       : Defines the modulation used to select the valid subapertures  -- default value is 50 lambda/D
-        _ extraModulationFactor : Extra Factor to increase/reduce the number of modulation point (extraModulationFactor = 1 means 4 modulation points added, 1 for each quadrant) 
-        _ psfCentering          : If False, the Pyramid mask is centered on 1 pixel, if True, the Pyramid mask is centered on 4 pixels -- default value is True 
-        _ binning               : binning factor of the PWFS detector signals -- default Value is 1
-        _ nTheta_user_defined   : user-defined number of Tip/Tilt modulation points 
-        _ delta_theta           : delta angle for the modulation points, default value is 0 (on the edge between two sides of the Pyramid)
-        _ userValidSignal       : user-defined valid pixel mask for the signals computation
-        _ rooftop               : if different to None, allows to compute a two-sided Pyramid ("V" corresponds to a vertical split, "H" corresponds to an horizontal split)  
-        _ zeroPadding           : User-defined zero-padding value in pixels that will be added to each side of the arrays. Consider using the n_pix_edge parameter that allows to do the same thing. 
-        _ pupilReflectivcty     : Defines the reflectivity of the Telescope object. If not set to 1, it can be input as a 2D map of uneven reflectivy correspondong to the pupil mask. 
-        _ user_modulation_path  : user-defined modulation path ( a list of [x,y] coordinates in lambda/D units is expected)
-            
+        Parameters
+        ----------
+        nSubap : float
+            The number of subapertures (ie the diameter of the Pyramid Pupils in pixels).
+        telescope : TYPE
+            The telescope object to which the Pyramid is associated. This object carries the phase, flux and pupil information.
+        modulation : float
+            The Tip-Tilt modulation in [lambda/D] where lambda is the NGS wavelength and D the telescope diameter.
+        lightRatio : float
+            Criterion to select the valid subaperture based on flux considerations.
+        postProcessing : str, optional
+            Processing of the WFS signals ('fullFrame','slopesMaps','fullFrame_incidence_flux','slopesMaps_incidence_flux').
+            The default is 'slopesMaps'.
+        psfCentering : bool, optional
+            If False, the Pyramid mask is centered on 1 pixel, if True, the Pyramid mask is centered on 4 pixels -- default value is True.
+            The default is True.
+        n_pix_separation : float, optional
+            Number of pixels separating the Pyramid Pupils in number of pixels of the detector.
+            The default is 2.
+        calibModulation : float, optional
+            Defines the modulation used to select the valid subapertures.
+            The default is 50.
+        n_pix_edge : float, optional
+            number of pixel at the edge of the Pyramid Pupils in number of pixels of the detector.
+            The default is None and corresponds to n_pix_separation/2.
+        extraModulationFactor : int, optional
+            Extra Factor to increase/reduce the number of modulation point (extraModulationFactor = 1 means 4 modulation points added, 1 for each quadrant).
+            The default is 0.
+        zeroPadding : int, optional
+            User-defined zero-padding value in pixels that will be added to each side of the arrays. 
+            Consider using the n_pix_edge parameter that allows to do the same thing.
+            The default is None.
+        binning : int, optional
+            binning factor of the PWFS detector signals.
+            The default is 1.
+        nTheta_user_defined : int, optional
+            _ nTheta_user_defined   : user-defined number of Tip/Tilt modulation points.
+            The default is None and corresponds to using the default value set by the modulation parameter.
+        userValidSignal : bool, optional
+            User-defined valid pixel mask for the signals computation.
+            The default is None.
+        old_mask : bool, optional
+            DEPRECIATED -- Flag to use the old pyramid mask.
+            The default is False.
+        rooftop : str, optional
+            If different to None, allows to compute a two-sided Pyramid ("V" corresponds to a vertical split, "H" corresponds to an horizontal split).
+            The default is None.
+        delta_theta : float, optional
+            delta angle for the modulation points, default value is 0 (on the edge between two sides of the Pyramid).
+            The default is 0.
+        user_modulation_path : list, optional
+            user-defined modulation path ( a list of [x,y] coordinates in lambda/D units is expected).
+            The default is None.
+        pupilSeparationRatio : float, optional
+            DEPRECTIATED -- Separation ratio of the PWFS pupils (Diameter/Distance Center to Center) -- DEPRECIATED -> use n_pix_separation instead).
+            The default is None.
+        edgePixel : int, optional
+            DEPRECIATED -- number of pixel at the edge of the Pyramid Pupils.
+            The default is None.
+
+        Raises
+        ------
+        ValueError
+            DESCRIPTION.
+        AttributeError
+            DESCRIPTION.
+
+        Returns
+        -------
+            None.
+  
         ************************** PROPAGATING THE LIGHT TO THE PYRAMID OBJECT **************************
         The light can be propagated from a telescope object tel through the Pyramid object wfs using the * operator:        
         _ tel*wfs
@@ -104,7 +152,6 @@ class Pyramid:
 
         The main properties of the object can be displayed using :
             wfs.print_properties()
-
 
         the following properties can be updated on the fly:
             _ wfs.modulation            : update the modulation radius and update the reference signal
@@ -227,7 +274,9 @@ class Pyramid:
         self.center                     = self.nRes//2                                                       # Center of the zero-Padded array
         self.supportPadded              = self.convert_for_gpu(np.pad(self.telescope.pupil.astype(complex),((self.zeroPadding,self.zeroPadding),(self.zeroPadding,self.zeroPadding)),'constant'))
         self.spatialFilter              = None                                                               # case where a spatial filter is considered
-        self.fov                        = 206265*self.telescope.resolution*(self.telescope.src.wavelength/self.telescope.D) # fov in arcsec 
+        self.fov                        = 206265*self.nRes/self.zeroPaddingFactor*(self.telescope.src.wavelength/self.telescope.D) # fov in arcsec 
+        self.fov_l_d                    = self.nRes/self.zeroPaddingFactor # fov in arcsec 
+
         n_cpu = multiprocessing.cpu_count()
         # joblib settings for parallization
         if self.gpu_available is False:
@@ -235,7 +284,7 @@ class Pyramid:
                 self.nJobs                      = 8                                                                 # number of jobs for the joblib package
             else:
                 self.nJobs                      = 6
-            self.n_max = 20*500
+            self.n_max = 1e9
         else:
             # quantify GPU max memory usage
             A = np.ones([self.nRes,self.nRes]) + 1j*np.ones([self.nRes,self.nRes])
@@ -543,6 +592,7 @@ class Pyramid:
                                 Q = Parallel(n_jobs=self.nJobs,prefer=self.joblib_setting)(delayed(self.pyramid_transform)(i) for i in self.convert_for_gpu(self.phaseBuffModulationLowres[i*n_max_:,:,:]))
                                 return Q 
                             maps+=self.convert_for_numpy(np_cp.sum(np_cp.asarray(job_loop_single_mode_modulated()),axis=0))
+                    self.maps = maps.copy()
                     self.pyramidFrame=maps/self.nTheta
                     del maps
                 else:
@@ -646,40 +696,40 @@ class Pyramid:
             cameraFrame=self.cam.frame
         if self.postProcessing == 'slopesMaps':
             # slopes-maps computation
-            I1              = self.grabQuadrant(1,cameraFrame=0)*self.validI4Q
-            I2              = self.grabQuadrant(2,cameraFrame=0)*self.validI4Q
-            I3              = self.grabQuadrant(3,cameraFrame=0)*self.validI4Q
-            I4              = self.grabQuadrant(4,cameraFrame=0)*self.validI4Q
+            I1              = self.grabQuadrant(1,cameraFrame=None)*self.validI4Q
+            I2              = self.grabQuadrant(2,cameraFrame=None)*self.validI4Q
+            I3              = self.grabQuadrant(3,cameraFrame=None)*self.validI4Q
+            I4              = self.grabQuadrant(4,cameraFrame=None)*self.validI4Q
             # global normalisation
             I4Q        = I1+I2+I3+I4
-            norma      = np.mean(I4Q[self.validI4Q])
+            self.norma      = np.mean(I4Q[self.validI4Q])
             # slopesMaps computation cropped to the valid pixels
             Sx         = (I1-I2+I4-I3)            
             Sy         = (I1-I4+I2-I3)         
             # 2D slopes maps      
-            slopesMaps = (np.concatenate((Sx,Sy)/norma) - self.referenceSignal_2D) *self.slopesUnits
+            slopesMaps = (np.concatenate((Sx,Sy)/self.norma) - self.referenceSignal_2D) *self.slopesUnits
             # slopes vector
             slopes     = slopesMaps[np.where(self.validSignal==1)]
             return slopesMaps,slopes
     
         if self.postProcessing == 'slopesMaps_incidence_flux':
             # slopes-maps computation
-            I1              = self.grabQuadrant(1,cameraFrame=0)*self.validI4Q
-            I2              = self.grabQuadrant(2,cameraFrame=0)*self.validI4Q
-            I3              = self.grabQuadrant(3,cameraFrame=0)*self.validI4Q
-            I4              = self.grabQuadrant(4,cameraFrame=0)*self.validI4Q
+            I1              = self.grabQuadrant(1,cameraFrame=None)*self.validI4Q
+            I2              = self.grabQuadrant(2,cameraFrame=None)*self.validI4Q
+            I3              = self.grabQuadrant(3,cameraFrame=None)*self.validI4Q
+            I4              = self.grabQuadrant(4,cameraFrame=None)*self.validI4Q
 
             # global normalisation
             I4Q         = I1+I2+I3+I4
             subArea     = (self.telescope.D / self.nSubap)**2
-            norma       = np.float64(self.telescope.src.nPhoton*self.telescope.samplingTime*subArea)
+            self.norma       = np.float64(self.telescope.src.nPhoton*self.telescope.samplingTime*subArea)
 
             # slopesMaps computation cropped to the valid pixels
             Sx         = (I1-I2+I4-I3)            
             Sy         = (I1-I4+I2-I3)   
             
             # 2D slopes maps      
-            slopesMaps = (np.concatenate((Sx,Sy)/norma) - self.referenceSignal_2D) *self.slopesUnits
+            slopesMaps = (np.concatenate((Sx,Sy)/self.norma) - self.referenceSignal_2D) *self.slopesUnits
             
             # slopes vector
             slopes     = slopesMaps[np.where(self.validSignal==1)]
@@ -688,41 +738,47 @@ class Pyramid:
         if self.postProcessing == 'fullFrame_incidence_flux':
             # global normalization
             subArea     = (self.telescope.D / self.nSubap)**2
-            norma       = np.float64(self.telescope.src.nPhoton*self.telescope.samplingTime*subArea)/4
+            self.norma       = np.float64(self.telescope.src.nPhoton*self.telescope.samplingTime*subArea)/4
             # 2D full-frame
-            fullFrameMaps  = (cameraFrame / norma )  - self.referenceSignal_2D
+            fullFrameMaps  = (cameraFrame / self.norma )  - self.referenceSignal_2D
             # full-frame vector
             fullFrame  = fullFrameMaps[np.where(self.validSignal==1)]
             
             return fullFrameMaps,fullFrame
         if self.postProcessing == 'fullFrame':
             # global normalization
-            norma = np.sum(cameraFrame[self.validSignal])
+            self.norma = np.sum(cameraFrame[self.validSignal])
             # 2D full-frame
-            fullFrameMaps  = (cameraFrame / norma )  - self.referenceSignal_2D
+            fullFrameMaps  = (cameraFrame / self.norma )  - self.referenceSignal_2D
             # full-frame vector
             fullFrame  = fullFrameMaps[np.where(self.validSignal==1)]
             
             return fullFrameMaps,fullFrame
         
     def get_modulation_frame(self, radius = 6, norma = True):
+        
         self.modulation_camera_frame = np.sum(np.abs(self.modulation_camera_em)**2,axis=0)
        
         N_trunc = int(self.nRes/2 - radius*self.modulation*self.zeroPaddingFactor )
-        
-        modulation_camera_frame_zoom = self.modulation_camera_frame[N_trunc:-N_trunc,N_trunc:-N_trunc]
+        print(N_trunc)
+        if N_trunc<=0:
+            print('radius Value is too high as the field of view is limited to '+str(self.fov_l_d/2) +' lambda/D -- ignoring')
+            modulation_camera_frame_zoom = self.modulation_camera_frame.copy()
+
+        else:
+            modulation_camera_frame_zoom = self.modulation_camera_frame[N_trunc:-N_trunc,N_trunc:-N_trunc]
         
         if norma:
             modulation_camera_frame_zoom/= modulation_camera_frame_zoom.max()
         
         return modulation_camera_frame_zoom
 # %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% GRAB QUADRANTS FUNCTIONS %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% 
-    def grabQuadrant(self,n,cameraFrame=0):
+    def grabQuadrant(self,n,cameraFrame=None):
         
         nExtraPix   = int(np.round((np.max(self.pupilSeparationRatio)-1)*self.telescope.resolution/(self.telescope.resolution/self.nSubap)/2/self.binning))
         centerPixel = int(np.round((self.cam.resolution/self.binning)/2))
         n_pixels    = int(np.ceil(self.nSubap/self.binning))
-        if cameraFrame ==0:
+        if cameraFrame is None:
             cameraFrame=self.cam.frame.copy()
             
         if self.rooftop is None:
@@ -980,5 +1036,7 @@ class Pyramid:
         print('{: ^18s}'.format('Signal Computation')   + '{: ^18s}'.format(str(self.postProcessing)                                                ))
         print('%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%')
 
-   
+    def __repr__(self):
+        self.print_properties()
+        return ' '
         
