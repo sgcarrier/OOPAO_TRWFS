@@ -895,9 +895,9 @@ class Pyramid:
             self.phaseBuffModulationLowres  = np.zeros([self.nTheta,self.telescope.resolution,self.telescope.resolution]).astype(np_cp.float32)          
             
             for i in range(self.nTheta):
-                self.TT                                                                                                                                         = (self.modulation_path[i][0]*self.Tip+self.modulation_path[i][1]*self.Tilt)*self.telescope.pupil
+                self.TT = (self.modulation_path[i][0]*self.Tip+self.modulation_path[i][1]*self.Tilt)*self.telescope.pupil
                 self.phaseBuffModulation[i,self.center-self.telescope.resolution//2:self.center+self.telescope.resolution//2,self.center-self.telescope.resolution//2:self.center+self.telescope.resolution//2]         = self.TT
-                self.phaseBuffModulationLowres[i,:,:]                                                                                                           = self.TT
+                self.phaseBuffModulationLowres[i,:,:] = self.TT
             self.phaseBuffModulationLowres_CPU = self.phaseBuffModulationLowres.copy()
             if self.gpu_available:
                 if self.nTheta<=self.n_max:                        
