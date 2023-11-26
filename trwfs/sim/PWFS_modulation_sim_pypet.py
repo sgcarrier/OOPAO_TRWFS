@@ -390,14 +390,21 @@ class PyramidPropagationSimulation:
         filename = f"results/pyr_mod{modulation}_cycles{mask_cycles}_angle{mask_angle}_amp{int(mask_amplitude * (1e9))}nm_D8.gif"
         anim.save(filename, writer='imagemagick', fps=1)
 
-    def viewAndCompareToFITS_reduced(self, traj, modulation, mask_cycles, mask_angle, mask_amplitude, fitsFileLocation, offset=550):
+    def viewAndCompareToFITS_reduced(self, traj, modulation, mask_cycles, mask_angle, mask_amplitude, fitsFileLocation, refFitsFileLocation, offset=550, ref_offset=550):
         with fits.open(fitsFileLocation) as hdul:
 
             hdul.info()
             fitsdata = hdul[0].data
 
-        fitsframes = fitsdata.shape[2]
+        with fits.open(refFitsFileLocation) as hdul:
+
+            hdul.info()
+            REF_fitsdata = hdul[0].data
+
+        #fitsframes = fitsdata.shape[2]
         fitsdata = np.transpose(fitsdata, (2,0,1))
+        ref_fitsdata = np.transpose(REF_fitsdata, (2,0,1))
+
         filter_function = lambda modulation_l, mask_cycles_l, mask_angle_l, mask_amplitude_l: modulation_l == modulation and \
                                                                                               mask_cycles_l == mask_cycles and \
                                                                                               mask_angle_l == mask_angle and \
@@ -477,7 +484,7 @@ class PyramidPropagationSimulation:
         im1 = ax1.imshow(traj.crun.cube[0, :, :], cmap=cm.Greys_r)
         # im2 = ax1_r.imshow(traj.crun.cube_ref[0, :, :], cmap=cm.Greys_r)
         # im3 = ax1_d.imshow(cube_diff[0, :, :], cmap=cm.Greys_r)
-        imfits = axfits.imshow(fitsdata[0,:,:], cmap=cm.Greys_r)
+        imfits = axfits.imshow(fitsdata[0,:,:]-ref_fitsdata[0,:,:], cmap=cm.Greys_r)
 
         #im4 = ax2.scatter((traj.crun.thetaModulation[0]), distance, s=200)
         # im5 = ax3.axvline(0, color='r')
@@ -523,8 +530,8 @@ class PyramidPropagationSimulation:
             """ Experimental data """
             # rightFrame = int(((67-i))*(50/100))
             #rightFrame = i
-            imfits.set_data(fitsdata[offset-i, :, :])
-            imfits.set_clim(vmin=fitsdata[offset-i, :, :].min(), vmax=fitsdata[offset-i, :, :].max())
+            imfits.set_data(fitsdata[offset-i, :, :]-ref_fitsdata[ref_offset-i, :, :])
+            imfits.set_clim(vmin=(fitsdata[offset-i, :, :]-ref_fitsdata[ref_offset-i, :, :]).min(), vmax=(fitsdata[offset-i, :, :]-ref_fitsdata[ref_offset-i, :, :]).max())
 
             """ Beam position """
             #frames_to_use_for_image = (traj.crun.image_cube.shape[0]) + np.array(frames_to_use)
