@@ -4,7 +4,7 @@ from pypet import Environment, cartesian_product
 
 from trwfs.parameter_files.parameterFile_TR_PWFS_general import *
 
-folderDataSaveLocation = "/mnt/home/usager/cars2019/Documents/Programming/OOPAO_TRWFS/trwfs/sum/res/"
+folderDataSaveLocation = "/home/simonc/Documents/Programming/OOPAO_TRWFS/trwfs/sum/res/"
 
 
 """This file serves to generate all simulation results"""
@@ -38,7 +38,7 @@ PC = PWFS_CL(minimum_data_only=True)
 param = initializeParameterFile()
 
 # Create an environment that handles running our simulation
-env = Environment(trajectory='run_loops', filename=folderDataSaveLocation + 'quick_test_r0186_3.hdf5',
+env = Environment(trajectory='run_loops', filename=folderDataSaveLocation + 'quick_test.hdf5',
                   file_title='PWFS_CL_ppsub_strehl',
                   comment='Simulation with an r0 of 0.186, subaperture photons and modulation=0 and 5.',
                   large_overview_tables=True,

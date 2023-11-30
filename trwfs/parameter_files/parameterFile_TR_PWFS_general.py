@@ -27,8 +27,8 @@ def initializeParameterFile():
 
     ###%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% M1 PROPERTIES %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-    param['diameter'             ] = 8                                             # diameter in [m]
-    param['nSubaperture'         ] = 20                                             # number of PWFS subaperture along the telescope diameter
+    param['diameter'             ] = 24                                             # diameter in [m]
+    param['nSubaperture'         ] = 30                                             # number of PWFS subaperture along the telescope diameter
     param['nPixelPerSubap'       ] = 4                                           # sampling of the PWFS subapertures
     param['resolution'           ] = param['nSubaperture']*param['nPixelPerSubap']  # resolution of the telescope driven by the PWFS
     param['sizeSubaperture'      ] = param['diameter']/param['nSubaperture']        # size of a sub-aperture projected in the M1 space
@@ -62,7 +62,7 @@ def initializeParameterFile():
 
     ###%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% WFS PROPERTIES %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-    param['modulation'            ] = 5                                             # modulation radius in ratio of wavelength over telescope diameter
+    param['modulation'            ] = 3                                             # modulation radius in ratio of wavelength over telescope diameter
     param['pupilSeparationRatio'  ] = 1.2                                           # separation ratio between the PWFS pupils
     param['psfCentering'          ] = False                                         # centering of the FFT and of the PWFS mask on the 4 central pixels
     param['calibrationModulation' ] = 30                                            # modulation radius used to select the valid pixels
@@ -76,7 +76,7 @@ def initializeParameterFile():
 
     ###%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% LOOP PROPERTIES %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-    param['nLoop'                 ] = 1000                                           # number of iteration
+    param['nLoop'                 ] = 500                                           # number of iteration
     param['photonNoise'           ] = True                                         # Photon Noise enable
     param['readoutNoise'          ] = 0                                            # Readout Noise value
     param['gainCL'                ] = 0.3                                          # integrator gain
