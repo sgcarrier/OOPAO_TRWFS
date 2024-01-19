@@ -281,7 +281,7 @@ class Pyramid:
         # joblib settings for parallization
         if self.gpu_available is False:
             if n_cpu > 16:
-                self.nJobs                      = 8                                                                 # number of jobs for the joblib package
+                self.nJobs                      = 16                                                                 # number of jobs for the joblib package
             else:
                 self.nJobs                      = 6
             self.n_max = 1e9

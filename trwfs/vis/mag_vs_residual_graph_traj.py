@@ -1,6 +1,8 @@
 import pickle
 from pathlib import Path
 
+import matplotlib
+matplotlib.use('QtAgg')
 import matplotlib.pyplot as plt
 from cycler import cycler
 import numpy as np
@@ -12,13 +14,68 @@ class WFS_SIMU_VISU():
     def __init__(self, filename):
         self.traj = Trajectory("run_loops")
         self.traj.f_load(load_parameters=2, load_derived_parameters=0, load_results=1,
-                        load_other_data=0, filename=filename)
+                        load_other_data=0, filename=filename, force=True)
         self.traj.v_auto_load = True
 
         self.cycle_colors = plt.rcParams['axes.prop_cycle'].by_key()['color']
-        self.cycle_styles = ['--', '-', ':', '-.']
+        self.cycle_styles = ['-', '--', '-.']
 
-    def display_graph_parameters(self, x, y, parameters, remove_first=50, reduce_function=np.mean, reduce_lines=False, logx=False, logy=False, title=None, xlabel=None, ylabel=None, config_subtitle=[]):
+
+    def get_explored_parameters_and_combinations(self):
+        ep = self.traj.f_get_explored_parameters()
+        eps_that_change = []
+        for p in ep.keys():
+            if len(np.unique(ep[p].f_get_range())) > 1:
+                eps_that_change.append(p)
+
+        eps_dict = {el:[] for el in eps_that_change}
+        for p in eps_that_change:
+            eps_dict[p] = ep[p].f_get_range()
+
+        df = pd.DataFrame.from_dict(eps_dict)
+        df.drop_duplicates()
+
+        return df
+
+    def get_graph(self, y, parameters, remove_first=50):
+        parameters_in_file = self.traj.f_get_parameters()
+        all_fields = y + parameters
+        # The data we will use to create the plot will be stored in "data" dict
+        data = {el: [] for el in all_fields}
+        # Run through all runs
+        for run_name in self.traj.f_get_run_names():
+            self.traj.f_set_crun(run_name)
+            # Grab only the fields we are interested in
+            for f in all_fields:
+                if f in parameters_in_file.keys():
+                    if isinstance(self.traj[f], list):
+                        data[f].append((self.traj[f][remove_first:]))
+                    else:
+                        data[f].append(self.traj[f])
+                else:  # When the field is a result, need to access crun
+                    if isinstance(self.traj.crun[f], np.ndarray):
+                         data[f].append((self.traj.crun[f][remove_first:]))
+                    else:
+                        data[f].append(self.traj.crun[f])
+
+        df = pd.DataFrame.from_dict(data)
+
+        # try:
+        #     # columns are the different lines
+        #     to_plot = df.pivot(columns=parameters, values=y)
+        # except ValueError as e:
+        #     print(
+        #         "ERROR: There seems to be more parameters that expected, cannot create a plot because there are duplicate values")
+        #     # print(f"The used parameters during the run were: {parameters_in_file.keys()}")
+        #     print("Did you forget to use one?")
+        #     print(e)
+        #     exit(1)
+
+        return df
+
+
+
+    def display_graph_parameters(self, x, y, parameters, remove_first=50, reduce_function=np.mean, reduce_lines=[], aggfunc=np.max, logx=False, logy=False, title=None, xlabel=None, ylabel=None, config_subtitle=[]):
         parameters_in_file = self.traj.f_get_parameters()
         all_fields = [x] + [y] + parameters
         # The data we will use to create the plot will be stored in "data" dict
@@ -46,10 +103,11 @@ class WFS_SIMU_VISU():
         try :
             # columns are the different lines
             to_plot = df.pivot(index=x, columns=parameters, values=y)
+            parameters_to_use = parameters.copy()
+            if len(reduce_lines) != 0:
+                parameters_to_use = [ elem for elem in parameters if elem not in reduce_lines]
+                to_plot = df.pivot_table(index=x, columns=parameters_to_use, values=y, aggfunc=aggfunc)
 
-            if reduce_lines:
-                to_keep = list(np.unique(to_plot.idxmax(axis="columns")))
-                to_plot = to_plot[to_keep]
 
         except ValueError as e:
             print("ERROR: There seems to be more parameters that expected, cannot create a plot because there are duplicate values")
@@ -60,10 +118,11 @@ class WFS_SIMU_VISU():
 
 
         cycle_colors = plt.rcParams['axes.prop_cycle'].by_key()['color']
-        styles = self.cycle_styles[:df[parameters[1]].nunique()]
+        #styles = self.cycle_styles[:df[parameters[1], parameters[2]].nunique()]
+        styles = self.cycle_styles[:(~df.duplicated(parameters_to_use[1:])).sum()]
         #styles = self.cycle_styles
 
-        colors = self.cycle_colors[:df[parameters[0]].nunique()]
+        colors = self.cycle_colors[:df[parameters_to_use[0]].nunique()]
         cc = (cycler(color=colors) *
               cycler(linestyle=styles))
 
@@ -74,7 +133,7 @@ class WFS_SIMU_VISU():
         if not ylabel:
             ylabel = y
 
-        to_plot.plot(kind='line', grid=True, xlabel=xlabel, ylabel=ylabel, ax=ax, logx=logx, logy=logy)
+        to_plot.plot(kind='line', grid=True, xlabel=xlabel, ylabel=ylabel, ax=ax, logx=logx, logy=logy)#, marker='o')
 
         if title:
             subtitle = ""
@@ -86,7 +145,28 @@ class WFS_SIMU_VISU():
                     subtitle += f" {conf}={self.traj[conf]},"
             ax.set_title(title+"\n"+subtitle)
 
-        plt.show()
+        lines = ax.get_lines()
+        legend_title = f"({parameters_to_use} )"
+        leg = ax.legend(title=legend_title)
+        lined = {}  # Will map legend lines to original lines.
+        for legline, origline in zip(leg.get_lines(), lines):
+            legline.set_picker(True)  # Enable picking on the legend line.
+            lined[legline] = origline
+
+        def on_pick(event):
+            # On the pick event, find the original line corresponding to the legend
+            # proxy line, and toggle its visibility.
+            legline = event.artist
+            origline = lined[legline]
+            visible = not origline.get_visible()
+            origline.set_visible(visible)
+            # Change the alpha on the line in the legend so we can see what lines
+            # have been toggled.
+            legline.set_alpha(1.0 if visible else 0.2)
+            fig.canvas.draw()
+
+        fig.canvas.mpl_connect('pick_event', on_pick)
+
 
         self.traj.f_restore_default()
 
@@ -200,17 +280,17 @@ class WFS_SIMU_VISU():
 
     def show_specific_closed_loop2(self, mag, gain):
 
-        data_cl = {"Turbulence": [], "Residual with mod": [],"Residual No mod": []}
+        data_cl = {"Turbulence": [], "Residual Normal": [],"Residual Custom": []}
 
         filter_function  = lambda magnitude, gainCL: magnitude==mag and gainCL==gain
         idx_iterator = self.traj.f_find_idx(['parameters.magnitude', 'parameters.gainCL'], filter_function)
         for idx in idx_iterator:
             self.traj.v_idx = idx
             data_cl["Turbulence"] = self.traj.crun.Turbulence
-            if self.traj.modulation == 3 and self.traj.enable_custom_frames == False:
-                data_cl["Residual with mod"] = self.traj.crun.Residual
-            elif self.traj.modulation == 0 and self.traj.enable_custom_frames == False:
-                data_cl["Residual No mod"] = self.traj.crun.Residual
+            if self.traj.modulation == 5:
+                data_cl["Residual Custom"] = self.traj.crun.Residual
+            elif self.traj.modulation == 0:
+                data_cl["Residual Normal"] = self.traj.crun.Residual
 
         df_cl = pd.DataFrame.from_dict(data_cl)
         ax = df_cl.plot()
@@ -221,26 +301,56 @@ class WFS_SIMU_VISU():
         plt.show()
         self.traj.f_restore_default()
 
+    def show_specific_closed_loop3(self, mag, gain):
+
+        data_cl = {"Turbulence": [], "Residual Normal": [],"Residual Custom": []}
+
+        filter_function  = lambda magnitude, gainCL: magnitude==mag and gainCL==gain
+        idx_iterator = self.traj.f_find_idx(['parameters.magnitude', 'parameters.gainCL'], filter_function)
+        for idx in idx_iterator:
+            self.traj.v_idx = idx
+            data_cl["Turbulence"] = self.traj.crun.Turbulence
+            if self.traj.modulation == 5 and self.traj.enable_custom_frames:
+                data_cl["Residual Custom"] = self.traj.crun.Residual
+                print(self.traj.crun.numRemFramesPerBase)
+            if self.traj.modulation == 5 and (not self.traj.enable_custom_frames):
+                data_cl["Residual Modulated"] = self.traj.crun.Residual
+            elif self.traj.modulation == 0:
+                data_cl["Residual Normal"] = self.traj.crun.Residual
+
+        df_cl = pd.DataFrame.from_dict(data_cl)
+        ax = df_cl.plot()
+        ax.set_xlabel("Time (iterations)")
+        ax.set_ylabel("WFE (nm)")
+        ax.set_title(f"Closed-loop WFE through iterations.\nMagnitude={mag}, Gain={gain}")
+
+
+        self.traj.f_restore_default()
+
 if __name__ == "__main__":
 
-    WSV = WFS_SIMU_VISU("/mnt/home/usager/cars2019/Documents/Programming/OOPAO_TRWFS/trwfs/sum/res/long_test_29dec2023.hdf5")
+    #WSV = WFS_SIMU_VISU("/media/simonc/Sagittarius/Programming/OOPAO_TRWFS/trwfs/sum/res/general_right_before_leaving_small_shortcut.hdf5")
+    WSV = WFS_SIMU_VISU("/mnt/home/usager/cars2019/Documents/Programming/OOPAO_TRWFS/trwfs/sum/res/gain_test_16jan2024.hdf5")
     WSV.display_graph_parameters(x="photons_per_subArea",
-                                 y="SR_H",
-                                 parameters=["modulation","enable_custom_frames", "gainCL"],
+                                 y="SR_H", #SR_H
                                  remove_first=100,
-                                 reduce_lines=["gainCL"],
+                                 parameters=["enable_custom_frames", "modulation", "gainCL"],
+                                 reduce_lines=[],
                                  aggfunc=np.max,
                                  logx=True,
                                  ylabel="Strehl Ratio (H band)",
                                  xlabel="Photons per subaperture",
                                  title="Strehl Ratio as a function of photons per subaperture",
-                                 config_subtitle=["r0", "diameter"])
+                                 config_subtitle=["diameter", "r0"])
     #WSV.display_mag_residual_gainCL2()
     #
-    #WSV.show_specific_closed_loop2(mag=10.0, gain=0.3)
+    #WSV.show_specific_closed_loop(mag=15.0, gain=0.1)
+    # WSV.show_specific_closed_loop3(mag=16.5, gain=0.3)
+    # WSV.show_specific_closed_loop3(mag=17.0, gain=0.3)
+    # WSV.show_specific_closed_loop3(mag=17.5, gain=0.3)
 
 
-
+    plt.show()
 
 # plt.figure()
 #

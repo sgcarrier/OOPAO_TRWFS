@@ -4,28 +4,18 @@ import imageio, os
 
 # commom modules
 
-import matplotlib.pyplot as plt
+#import matplotlib.pyplot as plt
 import time
 import pickle
 from pathlib import Path
-plt.ion()
+#plt.ion()
 
 
-from OOPAO.Atmosphere       import Atmosphere
-
-from OOPAO.DeformableMirror import DeformableMirror
-from OOPAO.MisRegistration  import MisRegistration
-from OOPAO.Telescope        import Telescope
-from OOPAO.Pyramid        import Pyramid
-from OOPAO.Source           import Source
-from OOPAO.phaseStats       import spectrum
 # calibration modules
 import matplotlib.cm as cm
 from OOPAO.calibration.compute_KL_modal_basis import compute_M2C
-from OOPAO.calibration.ao_calibration import ao_calibration
 # display modules
 from OOPAO.tools.displayTools           import displayMap
-from OOPAO.calibration.InteractionMatrix import InteractionMatrix_weightedFrames
 
 from trwfs.tools.PWFS_CMOS_NOISE_PROOF_may2022_tools import *
 from tqdm import trange
@@ -194,15 +184,15 @@ class PWFS_CL():
         #                                                                       nTheta_user_defined=param["nTheta_user_defined"],
         #                                                                       numBases=100)
 
-        self.dm.coefs = self.M2C_KL[:, 0:10] * 1e-9
-        self.tel * self.dm * self.wfs
-        displayMap(self.tel.OPD)
+        #self.dm.coefs = self.M2C_KL[:, 0:10] * 1e-9
+        #self.tel * self.dm * self.wfs
+        #displayMap(self.tel.OPD)
 
         self.dm.coefs = 0
-        self.wfs.modulation = param["modulation"]
+        self.wfs.modulation = self.param["modulation"]
         self.tel * self.dm * self.wfs
-        im = plt.imshow(self.wfs.referenceSignal_2D)
-        im1_cbar = plt.colorbar(im)
+        #im = plt.imshow(self.wfs.referenceSignal_2D)
+        #im1_cbar = plt.colorbar(im)
 
 
         self.tel - self.atm
@@ -210,47 +200,59 @@ class PWFS_CL():
         nModes = self.M2C_KL.shape[1]
         stroke = 1 * 1e-9
 
-        i_cube = np.zeros((self.wfs.nTheta, np.sum(self.wfs.validSignal), nModes))
+
         # ngs.nPhoton = 10000000000
-        self.wfs.modulation = param['modulation']
+        self.wfs.modulation = self.param['modulation']
         self.dm.coefs = 0
         self.ngs * self.tel * self.dm * self.wfs
-        self.ref_cube = self.wfs.cam.cube[:, self.wfs.validSignal]
+        #self.ref_cube = self.wfs.cam.cube[:, self.wfs.validSignal]
 
-        for i in range(nModes):
+        self.ref_frame = self.wfs.cam.frame[self.wfs.validSignal]
 
-            # t = np.sqrt(np.mean((ref_cube/np.sum(ref_cube))**2, axis=1))
-            # ref_cube_c[:,i] = np.sqrt(np.mean((ref_cube/np.sum(ref_cube))**2, axis=1))/stroke
-            self.dm.coefs = self.M2C_KL[:, i] * stroke
-            self.tel * self.dm * self.wfs
-            push = self.wfs.cam.cube[:, self.wfs.validSignal]
-            push_signal = push / np.sum(push) - \
-                          self.ref_cube / np.sum(self.ref_cube)
+        if self.param['modulation'] > 0:
+            self.ref_cube = self.wfs.cam.cube[:, self.wfs.validSignal]
 
-            # push_cube_c[:,i] = np.sqrt(np.mean((push/np.sum(push))**2, axis=1))/stroke
-            if i == 0:
-                push_cube_c = np.mean(push_signal, axis=1) / stroke
+        if (self.param['modulation'] > 0) and (traj.enable_custom_frames):
 
-            self.dm.coefs = -self.M2C_KL[:, i] * stroke
-            self.tel * self.dm * self.wfs
-            pull = self.wfs.cam.cube[:, self.wfs.validSignal]
-            pull_signal = pull / np.sum(pull) - \
-                          self.ref_cube / np.sum(self.ref_cube)
-            if i == 0:
-                pull_cube_c = np.mean(pull_signal, axis=1) / stroke
+            i_cube = np.zeros((self.wfs.nTheta, np.sum(self.wfs.validSignal), nModes))
+            for i in range(nModes):
 
-            i_cube[:, :, i] = (0.5 * (push_signal - pull_signal) / stroke)
+                # t = np.sqrt(np.mean((ref_cube/np.sum(ref_cube))**2, axis=1))
+                # ref_cube_c[:,i] = np.sqrt(np.mean((ref_cube/np.sum(ref_cube))**2, axis=1))/stroke
+                self.dm.coefs = self.M2C_KL[:, i] * stroke
+                self.tel * self.dm * self.wfs
+                push = self.wfs.cam.cube[:, self.wfs.validSignal]
+                push_signal = push / np.sum(push) - \
+                              self.ref_cube / np.sum(self.ref_cube)
 
-        self.weighting_cube = np.zeros((self.wfs.nTheta, nModes))
-        for i in range(nModes):
-            # weighting_cube[:,i] = (np.std(i_cube[:, :, i], axis=1))
-            avg_val = np.mean(i_cube[:, :, i])
-            # avg_val = 0
-            self.weighting_cube[:, i] = ((np.mean((i_cube[:, :, i] - avg_val) ** 2, axis=1))) ** 2
-            # weighting_cube[:,i] = -(weighting_cube[:,i] - np.mean(weighting_cube[:,i]))
-            self.weighting_cube[:, i] = self.weighting_cube[:, i] / np.max(np.abs(self.weighting_cube[:, i]))
+                # push_cube_c[:,i] = np.sqrt(np.mean((push/np.sum(push))**2, axis=1))/stroke
+                if i == 0:
+                    push_cube_c = np.mean(push_signal, axis=1) / stroke
+
+                self.dm.coefs = -self.M2C_KL[:, i] * stroke
+                self.tel * self.dm * self.wfs
+                pull = self.wfs.cam.cube[:, self.wfs.validSignal]
+                pull_signal = pull / np.sum(pull) - \
+                              self.ref_cube / np.sum(self.ref_cube)
+                if i == 0:
+                    pull_cube_c = np.mean(pull_signal, axis=1) / stroke
+
+                i_cube[:, :, i] = (0.5 * (push_signal - pull_signal) / stroke)
+
+            self.weighting_cube = np.zeros((self.wfs.nTheta, nModes))
+            for i in range(nModes):
+                # weighting_cube[:,i] = (np.std(i_cube[:, :, i], axis=1))
+                avg_val = np.mean(i_cube[:, :, i])
+                # avg_val = 0
+                self.weighting_cube[:, i] = ((np.mean((i_cube[:, :, i] - avg_val) ** 2, axis=1))) ** 2
+                # weighting_cube[:,i] = -(weighting_cube[:,i] - np.mean(weighting_cube[:,i]))
+                self.weighting_cube[:, i] = self.weighting_cube[:, i] / np.max(np.abs(self.weighting_cube[:, i]))
+
 
             # weighting_cube[:,i] = np.arctan(weighting_cube[:,i])
+
+        else:
+            self.weighting_cube = np.ones((self.wfs.nTheta, nModes))
 
         # plt.figure(figsize=(30, 20))
         # im = plt.imshow(self.weighting_cube, cmap=cm.Greys)
@@ -258,22 +260,10 @@ class PWFS_CL():
         # plt.ylabel("Modulation Frame")
         # plt.xlabel("KL mode")
 
-
-        self.framesRemPerFace = [11, 11, 9, 9, 9, 7, 7, 7, 7, 7, 7, 7, 7, 5, 5, 5, 5, 5, 5, 5, 5, 5,
-                            3, 3, 3, 3, 3, 3, 3, 1, 1, 1, 1, 1, 1, 1, 1]
-        binary_weight_cube = np.ones((self.wfs.nTheta, nModes))
-        for f in range(len(self.framesRemPerFace)):
-            idx = calcEquidistantFrameIndices(self.framesRemPerFace[f], self.wfs.nTheta)
-            binary_weight_cube[idx, f] = 0
-
-        # plt.figure(figsize=(30, 20))
-        # im = plt.imshow(binary_weight_cube, cmap=cm.Greys)
-        # im1_cbar = plt.colorbar(im)
-        # plt.ylabel("Modulation Frame")
-        # plt.xlabel("KL mode")
-
-
         # %% -----------------------     INTERACTION MATRIX   ----------------------------------
+
+
+
 
         self.tel - self.atm
         self.wfs.cam.photonNoise = False
@@ -286,6 +276,7 @@ class PWFS_CL():
             self.dm.coefs = 0
             self.tel * self.dm * self.wfs
             ref_cube = self.wfs.cam.cube[:, self.wfs.validSignal]
+            #ref_cube = self.wfs.referenceSignalCube_2D[:, self.wfs.validSignal]
 
             for m in range(nModes):
                 self.dm.coefs = self.M2C_KL[:, m] * stroke
@@ -315,7 +306,8 @@ class PWFS_CL():
             self.wfs.modulation = 0
             self.dm.coefs = 0
             self.tel * self.dm * self.wfs
-            ref_frame = self.wfs.cam.frame[self.wfs.validSignal]
+            #ref_frame = self.wfs.cam.frame[self.wfs.validSignal]
+            ref_frame = self.wfs.referenceSignal_2D[self.wfs.validSignal]
 
             for m in range(nModes):
                 self.dm.coefs = self.M2C_KL[:, m] * stroke
@@ -337,15 +329,26 @@ class PWFS_CL():
 
             return imat
 
-        self.I_mat_modulated = getInterationMatrixModulated(np.ones((self.wfs.nTheta, nModes)), mod=param['modulation'])
-        self.I_mat_unmodulated = getInterationMatrixUnmodulated()
-        self.I_mat_weighted = getInterationMatrixModulated(self.weighting_cube, mod=param['modulation'])
-        self.I_mat_binary = getInterationMatrixModulated(binary_weight_cube, mod=param['modulation'])
 
-        self.I_mat_modulated_inv = inv(self.I_mat_modulated.T @ self.I_mat_modulated) @ self.I_mat_modulated.T
-        self.I_mat_unmodulated_inv = inv(self.I_mat_unmodulated.T @ self.I_mat_unmodulated) @ self.I_mat_unmodulated.T
-        self.I_mat_weighted_inv = inv(self.I_mat_weighted.T @ self.I_mat_weighted) @ self.I_mat_weighted.T
-        self.I_mat_binary_inv = inv(self.I_mat_binary.T @ self.I_mat_binary) @ self.I_mat_binary.T
+        if ((ao_calib_file) and (os.path.exists(ao_calib_file))):
+            self.calib_CL = pickle.load(open(ao_calib_file, "rb"))
+        else:
+            if traj.enable_custom_frames:
+                I_mat_weighted = getInterationMatrixModulated(self.weighting_cube, mod=self.param['modulation'])
+                I_mat_weighted_inv = inv(I_mat_weighted.T @ I_mat_weighted) @ I_mat_weighted.T
+                self.calib_CL = I_mat_weighted_inv
+            else:
+                if self.param['modulation'] == 0:
+                    I_mat_unmodulated = getInterationMatrixUnmodulated()
+                    I_mat_unmodulated_inv = inv(I_mat_unmodulated.T @ I_mat_unmodulated) @ I_mat_unmodulated.T
+                    self.calib_CL = I_mat_unmodulated_inv
+                else:
+                    I_mat_modulated = getInterationMatrixModulated(np.ones((self.wfs.nTheta, nModes)), mod=self.param['modulation'])
+                    I_mat_modulated_inv = inv(I_mat_modulated.T @ I_mat_modulated) @ I_mat_modulated.T
+                    self.calib_CL = I_mat_modulated_inv
+            if ao_calib_file:
+                pickle.dump(self.calib_CL, open(ao_calib_file, "wb"))
+
 
         # radian_in_1m = (2 * np.pi) / self.ngs.wavelength
         # plt.figure(figsize=(30, 10))
@@ -384,16 +387,11 @@ class PWFS_CL():
         # plt.show()
 
         # These are the calibration data used to close the loop
-        if traj.enable_custom_frames:
-            self.calib_CL = self.I_mat_weighted_inv
-        else:
-            if param['modulation'] == 0:
-                self.calib_CL = self.I_mat_unmodulated_inv
-            else:
-                self.calib_CL = self.I_mat_modulated_inv
-
         self.M2C_CL = self.M2C_KL
 
+        traj.f_add_result('calib_CL', self.calib_CL, comment="Interaction matrix")
+
+        self.wfs.modulation = self.param["modulation"]
         # combine telescope with atmosphere
         self.tel + self.atm
 
@@ -433,15 +431,20 @@ class PWFS_CL():
         OPD = np.zeros((self.param['nLoop'], self.tel.OPD.shape[0], self.tel.OPD.shape[1]))
         wfsSignal_record = np.zeros((self.param['nLoop'], ))
         if traj.enable_custom_frames:
-            wfsSignal = np.zeros(self.wfs.pyramidSignalCube.shape)
+            wfsSignal = np.zeros((self.wfs.cam.cube[:, self.wfs.validSignal]).shape, dtype=np.float64)
 
         else:
-            wfsSignal = np.zeros(self.wfs.pyramidSignal.shape)
+            wfsSignal = np.zeros((self.wfs.cam.frame[self.wfs.validSignal]).shape, dtype=np.float64)
 
-        wfsSignal_record = np.zeros((self.param['nLoop'],)+wfsSignal.shape)
+
+
+        wfsSignal_r = np.zeros((self.wfs.cam.frame).shape, dtype=np.float64)
+
+        wfsSignal_record = np.zeros((self.param['nLoop'],)+wfsSignal_r.shape)
         #wfsSignal = np.arange(0, self.wfs.nSignal) * 0
 
         a_est = np.zeros((self.M2C_CL.shape[1]))
+        mode_a_record = np.zeros((self.param['nLoop'], self.M2C_CL.shape[1]))
         wfs_to_use = None
 
         # loop parameters
@@ -449,9 +452,9 @@ class PWFS_CL():
         self.wfs.cam.photonNoise = self.param['photonNoise']
 
 
-        if not self.minimum_data_only:
-            traj.f_add_result("InteractionMatrix", self.calib_CL.M, comment="Interaction matrix")
-            traj.f_add_result("M2C", self.M2C_CL, comment="Modes 2 Commands (M2C) for the DM")
+        #if not self.minimum_data_only:
+        #    traj.f_add_result("InteractionMatrix", self.calib_CL.M, comment="Interaction matrix")
+        #    traj.f_add_result("M2C", self.M2C_CL, comment="Modes 2 Commands (M2C) for the DM")
 
         #for i in trange(self.param['nLoop'], position=0, leave=True):
         for i in trange(self.param['nLoop'], position=0, leave=True):
@@ -476,7 +479,7 @@ class PWFS_CL():
 
             if traj.enable_custom_frames:
                 for j_mode in range(len(a_est)):
-                    t_signal = self.wfs.cam.cube[:, self.wfs.validSignal]
+                    t_signal = wfsSignal
                     t_t_signal = np.sum(t_signal * weights[:, np.newaxis, j_mode], axis=0) / np.sum(
                         t_signal * weights[:, np.newaxis, j_mode]) - \
                                  np.sum(self.ref_cube * weights[:, np.newaxis, j_mode], axis=0) / np.sum(
@@ -484,16 +487,22 @@ class PWFS_CL():
                     # weighted_signal = wfsSignal * self.weightsPerFramePerMode[j_mode, :, np.newaxis]
                     a_est[j_mode] = (self.calib_CL @ t_t_signal)[j_mode]
             else:
-                a_est = self.calib_CL @ wfsSignal
+                t_signal = wfsSignal
+                t_t_signal = (t_signal / np.sum(t_signal)) - (self.ref_frame/ np.sum(self.ref_frame))
+                a_est = self.calib_CL @ t_t_signal
 
+            a_est = np.nan_to_num(a_est, nan=0)
             correction = np.matmul(self.M2C_CL, a_est)
 
             self.dm.coefs = self.dm.coefs - gainCL * correction
             # store the slopes after computing the commands => 2 frames delay
             if traj.enable_custom_frames:
-                wfsSignal = self.wfs.pyramidSignalCube
+                wfsSignal = self.wfs.cam.cube[:, self.wfs.validSignal]
             else:
-                wfsSignal = self.wfs.pyramidSignal
+                wfsSignal = self.wfs.cam.frame[self.wfs.validSignal]
+
+            wfsSignal_r = self.wfs.cam.frame
+            mode_a_record[i,:] = a_est
 
 
             SR[i] = np.exp(-np.var(self.tel.src.phase[np.where(self.tel.pupil == 1)]))
@@ -504,10 +513,7 @@ class PWFS_CL():
             SR_H[i] = np.exp(-4*(np.pi**2)*(rms**2) / (wavelenth**2))
             residual[i] = np.std(self.tel.OPD[np.where(self.tel.pupil > 0)]) * 1e9
             OPD[i, :, :] = self.tel.OPD
-            if traj.enable_custom_frames:
-                wfsSignal_record[i,:,:] = wfsSignal
-            else:
-                wfsSignal_record[i,:] = wfsSignal
+            wfsSignal_record[i,:,:] = wfsSignal_r
 
 
 
@@ -515,8 +521,11 @@ class PWFS_CL():
         traj.f_add_result('SR_H', SR_H, comment="Strehl Ratio in the H band")
         traj.f_add_result('Residual', residual, comment="Residual")
         traj.f_add_result('Turbulence', total, comment="Turbulence")
+
         if not self.minimum_data_only:
             traj.f_add_result('wfsSignal', wfsSignal_record, comment="wfsSignal during closed loop")
+            traj.f_add_result('OPD', OPD, comment="OPD")
+            traj.f_add_result('a_est', mode_a_record, comment="Estimated value of every mode")
         #traj.f_add_result('OPD', OPD, comment="OPD")
 
 
@@ -527,12 +536,12 @@ def dict_to_trajectory(d, traj):
 
 
 if __name__ == "__main__":
-    PC = PWFS_CL(minimum_data_only=True)
+    PC = PWFS_CL(minimum_data_only=False)
 
     param = initializeParameterFile()
 
     # Create an environment that handles running our simulation
-    env = Environment(trajectory='run_loops', filename='/home/simonc/Documents/Programming/OOPAO_TRWFS/trwfs/sum/res/quick_test5.hdf5',
+    env = Environment(trajectory='run_loops', filename='/mnt/home/usager/cars2019/Documents/Programming/OOPAO_TRWFS/trwfs/sum/res/short_test_17jan2024_7.hdf5',
                       file_title='testing',
                       comment='Trying out the weighted frames approach',
                       large_overview_tables=True,
@@ -553,13 +562,13 @@ if __name__ == "__main__":
 
     # Explore the parameters with a cartesian product
 
-    traj.f_explore(cartesian_product({'magnitude': [10.0, 11.0, 12.0, 13.0, 14.0],
-                                      'gainCL': [0.1, 0.2, 0.3, 0.4, 0.5],
+    traj.f_explore(cartesian_product({'magnitude': [14.0],
+                                      'gainCL': [0.4],
                                       'nModes': [600],
-                                      'nTheta_user_defined': [48,48, 48],
-                                      'modulation': [0, 5, 5],
-                                      'enable_custom_frames': [False, False, True],
-                                      'ao_calib_file': ["no_mod.pickle","mod.pickle","weighted_mod.pickle"]},
+                                      'nTheta_user_defined': [48, 48],
+                                      'modulation': [3, 3],
+                                      'enable_custom_frames': [False, True],
+                                      'ao_calib_file': ["mod_48F_17jan2024_3.pickle", "tr_mod_48F_17jan2024_3.pickle"]},
                                      ('magnitude', 'gainCL', 'nModes', ('nTheta_user_defined', 'modulation', 'enable_custom_frames', 'ao_calib_file'))))
 
     # traj.f_explore(cartesian_product({'magnitude': [10, 11,12, 13, 14, 15],
