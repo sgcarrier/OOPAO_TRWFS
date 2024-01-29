@@ -60,19 +60,46 @@ class WFS_SIMU_VISU():
 
         df = pd.DataFrame.from_dict(data)
 
-        # try:
-        #     # columns are the different lines
-        #     to_plot = df.pivot(columns=parameters, values=y)
-        # except ValueError as e:
-        #     print(
-        #         "ERROR: There seems to be more parameters that expected, cannot create a plot because there are duplicate values")
-        #     # print(f"The used parameters during the run were: {parameters_in_file.keys()}")
-        #     print("Did you forget to use one?")
-        #     print(e)
-        #     exit(1)
-
         return df
 
+    def fetch_plot_data(self, x, y, selected_parameter_values, remove_first=50, reduce_lines=[], reduce_func=np.max):
+
+        filter_function = lambda *args: all([arg == value for (arg, value) in zip(args, list(selected_parameter_values.values()))])
+
+
+        idx_iterator = self.traj.f_find_idx(list(selected_parameter_values.keys()), filter_function)
+
+        all_fields = [x] + [y] + list(selected_parameter_values.keys())
+        data = {el: [] for el in all_fields}
+
+        for idx in idx_iterator:
+            self.traj.v_idx = idx
+            for f in all_fields:
+                if f.startswith("parameters."):
+                    data[f].append(self.traj[f])
+                else:  # When the field is a result, need to access crun
+                    data[f].append(self.traj.crun[f])
+
+        df = pd.DataFrame.from_dict(data)
+
+        try:
+            # columns are the different lines
+            parameters_to_use = list(selected_parameter_values.keys()).copy()
+            to_plot = df.pivot(index=x, columns=parameters_to_use, values=y)
+
+            if len(reduce_lines) != 0:
+                parameters_to_use = [elem for elem in parameters_to_use if elem not in reduce_lines]
+                to_plot = df.pivot_table(index=x, columns=parameters_to_use, values=y, aggfunc=reduce_func)
+
+        except ValueError as e:
+            print(
+                "ERROR: There seems to be more parameters that expected, cannot create a plot because there are duplicate values")
+            # print(f"The used parameters during the run were: {parameters_in_file.keys()}")
+            print("Did you forget to use one?")
+            print(e)
+            return None
+
+        return df, to_plot
 
 
     def display_graph_parameters(self, x, y, parameters, remove_first=50, reduce_function=np.mean, reduce_lines=[], aggfunc=np.max, logx=False, logy=False, title=None, xlabel=None, ylabel=None, config_subtitle=[]):
@@ -341,7 +368,7 @@ if __name__ == "__main__":
                                  ylabel="Strehl Ratio (H band)",
                                  xlabel="Photons per subaperture",
                                  title="Strehl Ratio as a function of photons per subaperture",
-                                 config_subtitle=["diameter", "r0"])
+                                 config_subtitle=["diameter", "r0", "lightThreshold"])
     #WSV.display_mag_residual_gainCL2()
     #
     #WSV.show_specific_closed_loop(mag=15.0, gain=0.1)

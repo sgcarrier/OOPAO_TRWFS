@@ -490,26 +490,17 @@ class TR_Pyramid(Pyramid):
             obj.cube = obj.cube * (self.telescope.src.fluxMap.sum()) / obj.cube.sum()
 
             tmp_cube_sum = np.sum(obj.cube, axis=0)
+
+            ''' Unsure how noise should be applied so that the cube and frame "suffer" the same noise equally. 
+            For some reason, applying noise to the frame and cube seperately causes an unequal number of photons for 
+            each case when you expect the poisson noise to add the same number of photons'''
             if obj.photonNoise != 0:
-                # obj.frame = rs.poisson(obj.frame)
-                # # obj.frame = self.random_state_photon_noise.poisson(obj.frame)
-                #rs = np.random.default_rng(seed=100)
-                #alt_cube = rs.poisson(obj.cube)
-                #rs = np.random.default_rng(seed=100)
-                #alt_frame = rs.poisson(obj.frame)
-                # #alt_cube = self.random_state_photon_noise.poisson(obj.cube)
-
-                #obj.cube = self.random_state_photon_noise.poisson(obj.cube)
-
                 for i in range(obj.cube.shape[0]):
                     obj.cube[i, :, :] = self.random_state_photon_noise.poisson(obj.cube[i, :, :])
-                #     #obj.cube[i, :, :] = rs.poisson(obj.cube[i, :, :])
-
-                #alt_frame = self.random_state_photon_noise.poisson(obj.frame)
+                ''' For now, I'm applying the noise to the cube, then sum it to create the noisy frame image'''
                 obj.cube = np.int64(obj.cube)
                 obj.frame = np.sum(obj.cube, axis=0)
 
-                # tmp_cube_sum_2 = np.sum(obj.cube, axis=0)
 
             if obj.readoutNoise != 0:
                 obj.frame += np.int64(np.round(

@@ -71,11 +71,11 @@ def initializeParameterFile():
     param['nTheta_user_defined'   ] = 48                                            # Number for frames taken during the modulation. Must be a multiple of 4 for the pyramid
     param['postProcessing'        ] = 'fullFrame'                                   # post-processing of the PWFS signals
     param['unitCalibration'       ] = False                                         # calibration of the PWFS units using a ramp of Tip/Tilt    
-    
+
     
     ###%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% LOOP PROPERTIES %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-    param['nLoop'                 ] = 1000                                           # number of iteration
+    param['nLoop'                 ] = 2000                                           # number of iteration
     param['photonNoise'           ] = True                                         # Photon Noise enable
     param['readoutNoise'          ] = 0                                            # Readout Noise value
     param['gainCL'                ] = 0.3                                          # integrator gain
