@@ -357,12 +357,12 @@ class WFS_SIMU_VISU():
 if __name__ == "__main__":
 
     #WSV = WFS_SIMU_VISU("/media/simonc/Sagittarius/Programming/OOPAO_TRWFS/trwfs/sum/res/general_right_before_leaving_small_shortcut.hdf5")
-    WSV = WFS_SIMU_VISU("/mnt/home/usager/cars2019/Documents/Programming/OOPAO_TRWFS/trwfs/sum/res/gain_test_16jan2024.hdf5")
+    WSV = WFS_SIMU_VISU("/mnt/home/usager/cars2019/Documents/Programming/OOPAO_TRWFS/trwfs/sum/res/sum_weight_1_8m_L01_30jan2024.hdf5")
     WSV.display_graph_parameters(x="photons_per_subArea",
                                  y="SR_H", #SR_H
                                  remove_first=100,
                                  parameters=["enable_custom_frames", "modulation", "gainCL"],
-                                 reduce_lines=[],
+                                 reduce_lines=["gainCL"],
                                  aggfunc=np.max,
                                  logx=True,
                                  ylabel="Strehl Ratio (H band)",

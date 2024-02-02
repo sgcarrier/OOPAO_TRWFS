@@ -246,7 +246,7 @@ class PWFS_CL():
                 # avg_val = 0
                 self.weighting_cube[:, i] = ((np.mean((i_cube[:, :, i] - avg_val) ** 2, axis=1))) ** 2
                 # weighting_cube[:,i] = -(weighting_cube[:,i] - np.mean(weighting_cube[:,i]))
-                self.weighting_cube[:, i] = self.weighting_cube[:, i] / np.max(np.abs(self.weighting_cube[:, i]))
+                self.weighting_cube[:, i] = self.weighting_cube[:, i] / np.sum(np.abs(self.weighting_cube[:, i]))
 
 
             # weighting_cube[:,i] = np.arctan(weighting_cube[:,i])
@@ -547,7 +547,7 @@ if __name__ == "__main__":
     param = initializeParameterFile()
 
     # Create an environment that handles running our simulation
-    env = Environment(trajectory='run_loops', filename='/mnt/home/usager/cars2019/Documents/Programming/OOPAO_TRWFS/trwfs/sum/res/8m_L02_29jan2024.hdf5',
+    env = Environment(trajectory='run_loops', filename='/mnt/home/usager/cars2019/Documents/Programming/OOPAO_TRWFS/trwfs/sum/res/sum_weight_1_8m_L01_30jan2024.hdf5',
                       file_title='testing',
                       comment='Trying out the weighted frames approach',
                       large_overview_tables=True,
@@ -569,12 +569,12 @@ if __name__ == "__main__":
     # Explore the parameters with a cartesian product
 
     traj.f_explore(cartesian_product({'magnitude': [11.0, 12.0, 13.0, 14.0, 15.0],
-                                      'gainCL': [0.2, 0.3, 0.4, 0.5],
+                                      'gainCL': [0.1, 0.2, 0.3, 0.4, 0.5],
                                       'nModes': [600],
                                       'nTheta_user_defined': [48, 48],
                                       'modulation': [3, 3],
                                       'enable_custom_frames': [False, True],
-                                      'ao_calib_file': ["mod_48F_29jan2024_L02.pickle", "tr_mod_48F_29jan2024_L02.pickle"]},
+                                      'ao_calib_file': ["mod_48F_8m_30jan2024_L01.pickle", "tr_mod_48F_8m_30jan2024_L01.pickle"]},
                                      ('magnitude', 'gainCL', 'nModes', ('nTheta_user_defined', 'modulation', 'enable_custom_frames', 'ao_calib_file'))))
 
     # traj.f_explore(cartesian_product({'magnitude': [10, 11,12, 13, 14, 15],
