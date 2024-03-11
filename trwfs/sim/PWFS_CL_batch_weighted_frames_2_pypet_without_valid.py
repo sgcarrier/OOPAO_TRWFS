@@ -208,21 +208,23 @@ class PWFS_CL():
         self.ngs * self.tel * self.dm * self.wfs
         #self.ref_cube = self.wfs.cam.cube[:, self.wfs.validSignal]
 
-        self.ref_frame = self.wfs.cam.frame[self.wfs.validSignal]
+        self.all_validSignal = (np.ones(self.wfs.validSignal.shape) == 1)
+
+        self.ref_frame = self.wfs.cam.frame[self.all_validSignal]
 
         if self.param['modulation'] > 0:
-            self.ref_cube = self.wfs.cam.cube[:, self.wfs.validSignal]
+            self.ref_cube = self.wfs.cam.cube[:, self.all_validSignal]
 
         if (self.param['modulation'] > 0) and (traj.enable_custom_frames):
 
-            i_cube = np.zeros((self.wfs.nTheta, np.sum(self.wfs.validSignal), nModes))
+            i_cube = np.zeros((self.wfs.nTheta, np.sum(self.all_validSignal), nModes))
             for i in range(nModes):
 
                 # t = np.sqrt(np.mean((ref_cube/np.sum(ref_cube))**2, axis=1))
                 # ref_cube_c[:,i] = np.sqrt(np.mean((ref_cube/np.sum(ref_cube))**2, axis=1))/stroke
                 self.dm.coefs = self.M2C_KL[:, i] * stroke
                 self.tel * self.dm * self.wfs
-                push = self.wfs.cam.cube[:, self.wfs.validSignal]
+                push = self.wfs.cam.cube[:, self.all_validSignal]
                 push_signal = push / np.sum(push) - \
                               self.ref_cube / np.sum(self.ref_cube)
 
@@ -232,7 +234,7 @@ class PWFS_CL():
 
                 self.dm.coefs = -self.M2C_KL[:, i] * stroke
                 self.tel * self.dm * self.wfs
-                pull = self.wfs.cam.cube[:, self.wfs.validSignal]
+                pull = self.wfs.cam.cube[:, self.all_validSignal]
                 pull_signal = pull / np.sum(pull) - \
                               self.ref_cube / np.sum(self.ref_cube)
                 if i == 0:
@@ -272,18 +274,18 @@ class PWFS_CL():
         stroke = 1 * 1e-9
 
         def getInterationMatrixModulated(weights, mod=5):
-            imat = np.zeros((np.sum(self.wfs.validSignal), nModes))
+            imat = np.zeros((np.sum(self.all_validSignal), nModes))
             self.wfs.modulation = mod
             self.dm.coefs = 0
             self.tel * self.dm * self.wfs
-            ref_cube = self.wfs.cam.cube[:, self.wfs.validSignal]
+            ref_cube = self.wfs.cam.cube[:, self.all_validSignal]
             #ref_cube = self.wfs.referenceSignalCube_2D[:, self.wfs.validSignal]
 
             for m in range(nModes):
                 self.dm.coefs = self.M2C_KL[:, m] * stroke
                 self.tel * self.dm * self.wfs
 
-                push = self.wfs.cam.cube[:, self.wfs.validSignal]
+                push = self.wfs.cam.cube[:, self.all_validSignal]
                 push_signal = np.sum(push * weights[:, np.newaxis, m], axis=0) / np.sum(
                     push * weights[:, np.newaxis, m]) - \
                               np.sum(ref_cube * weights[:, np.newaxis, m], axis=0) / np.sum(
@@ -292,7 +294,7 @@ class PWFS_CL():
                 self.dm.coefs = -self.M2C_KL[:, m] * stroke
                 self.tel * self.dm * self.wfs
 
-                pull = self.wfs.cam.cube[:, self.wfs.validSignal]
+                pull = self.wfs.cam.cube[:, self.all_validSignal]
                 pull_signal = np.sum(pull * weights[:, np.newaxis, m], axis=0) / np.sum(
                     pull * weights[:, np.newaxis, m]) - \
                               np.sum(ref_cube * weights[:, np.newaxis, m], axis=0) / np.sum(
@@ -303,25 +305,25 @@ class PWFS_CL():
             return imat
 
         def getInterationMatrixUnmodulated():
-            imat = np.zeros((np.sum(self.wfs.validSignal), nModes))
+            imat = np.zeros((np.sum(self.all_validSignal), nModes))
             self.wfs.modulation = 0
             self.dm.coefs = 0
             self.tel * self.dm * self.wfs
             #ref_frame = self.wfs.cam.frame[self.wfs.validSignal]
-            ref_frame = self.wfs.referenceSignal_2D[self.wfs.validSignal]
+            ref_frame = self.wfs.referenceSignal_2D[self.all_validSignal]
 
             for m in range(nModes):
                 self.dm.coefs = self.M2C_KL[:, m] * stroke
                 self.tel * self.dm * self.wfs
 
-                push = self.wfs.cam.frame[self.wfs.validSignal]
+                push = self.wfs.cam.frame[self.all_validSignal]
                 push_signal = push / np.sum(push) - \
                               ref_frame / np.sum(ref_frame)
 
                 self.dm.coefs = -self.M2C_KL[:, m] * stroke
                 self.tel * self.dm * self.wfs
 
-                pull = self.wfs.cam.frame[self.wfs.validSignal]
+                pull = self.wfs.cam.frame[self.all_validSignal]
                 pull_signal = pull / np.sum(pull) - \
                               ref_frame / np.sum(ref_frame)
 
@@ -432,10 +434,10 @@ class PWFS_CL():
         OPD = np.zeros((self.param['nLoop'], self.tel.OPD.shape[0], self.tel.OPD.shape[1]))
         wfsSignal_record = np.zeros((self.param['nLoop'], ))
         if traj.enable_custom_frames:
-            wfsSignal = np.zeros((self.wfs.cam.cube[:, self.wfs.validSignal]).shape, dtype=np.float64)
+            wfsSignal = np.zeros((self.wfs.cam.cube[:, self.all_validSignal]).shape, dtype=np.float64)
 
         else:
-            wfsSignal = np.zeros((self.wfs.cam.frame[self.wfs.validSignal]).shape, dtype=np.float64)
+            wfsSignal = np.zeros((self.wfs.cam.frame[self.all_validSignal]).shape, dtype=np.float64)
 
 
 
@@ -505,9 +507,9 @@ class PWFS_CL():
             self.dm.coefs = self.dm.coefs - gainCL * correction
             # store the slopes after computing the commands => 2 frames delay
             if traj.enable_custom_frames:
-                wfsSignal = self.wfs.cam.cube[:, self.wfs.validSignal]
+                wfsSignal = self.wfs.cam.cube[:, self.all_validSignal]
             else:
-                wfsSignal = self.wfs.cam.frame[self.wfs.validSignal]
+                wfsSignal = self.wfs.cam.frame[self.all_validSignal]
 
             wfsSignal_r = self.wfs.cam.frame
             mode_a_record[i,:] = a_est
@@ -549,7 +551,7 @@ if __name__ == "__main__":
     param = initializeParameterFile()
 
     # Create an environment that handles running our simulation
-    env = Environment(trajectory='run_loops', filename='/mnt/home/usager/cars2019/Documents/Programming/OOPAO_TRWFS/trwfs/sum/res/r0_sweeping_11mar2024.hdf5',
+    env = Environment(trajectory='run_loops', filename='/mnt/home/usager/cars2019/Documents/Programming/OOPAO_TRWFS/trwfs/sum/res/all_valid_06mar2024_2.hdf5',
                       file_title='testing',
                       comment='Trying out the weighted frames approach',
                       large_overview_tables=True,
@@ -576,11 +578,9 @@ if __name__ == "__main__":
                                       'nTheta_user_defined': [48, 48],
                                       'modulation': [5, 5],
                                       'diameter': [8,8],
-                                      'r0': [0.2, 0.2, 0.1, 0.1],
-                                      'enable_custom_frames': [False, True, False, True ],
-                                      'ao_calib_file': ["mod5_48F_8m_11mar2024_r02.pickle", "tr_mod5_48F_8m_11mar2024_r02.pickle",
-                                                        "mod5_48F_8m_11mar2024_r01.pickle", "tr_mod5_48F_8m_11mar2024_r01.pickle"]},
-                                     ('magnitude', 'gainCL', 'nModes', ('nTheta_user_defined', 'modulation', 'diameter', 'r0', 'enable_custom_frames', 'ao_calib_file'))))
+                                      'enable_custom_frames': [False, True ],
+                                      'ao_calib_file': ["mod5_48F_20m_06mar2024_L01_2.pickle", "tr_mod5_48F_20m_06mar2024_L01_2.pickle"]},
+                                     ('magnitude', 'gainCL', 'nModes', ('nTheta_user_defined', 'modulation', 'diameter', 'enable_custom_frames', 'ao_calib_file'))))
 
     # traj.f_explore(cartesian_product({'magnitude': [14.0, 15.0, 16.0],
     #                                   'gainCL': [0.1, 0.2, 0.3, 0.4, 0.5],

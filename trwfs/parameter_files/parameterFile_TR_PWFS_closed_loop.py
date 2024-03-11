@@ -16,17 +16,20 @@ def initializeParameterFile():
     
     ###%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% ATMOSPHERE PROPERTIES %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
     
-    param['r0'                   ] = 0.186                                           # value of r0 in the visibile in [m]
+    param['r0'                   ] = 0.6                                           # value of r0 in the visibile in [m]
     param['L0'                   ] = 30                                             # value of L0 in the visibile in [m]
-    param['fractionnalR0'        ] = [0.45,0.1,0.1,0.25,0.1]                                            # Cn2 profile
-    param['windSpeed'            ] = [10,12,11,15,20]                                          # wind speed of the different layers in [m.s-1]
-    param['windDirection'        ] = [0,72,144,216,288]                                            # wind direction of the different layers in [degrees]
-    param['altitude'             ] = [0, 1000,5000,10000,12000 ]                                          # altitude of the different layers in [m]
-
+    # param['fractionnalR0'        ] = [0.45,0.1,0.1,0.25,0.1]                                            # Cn2 profile
+    # param['windSpeed'            ] = [10,12,11,15,20]                                          # wind speed of the different layers in [m.s-1]
+    # param['windDirection'        ] = [0,72,144,216,288]                                            # wind direction of the different layers in [degrees]
+    # param['altitude'             ] = [0, 1000,5000,10000,12000 ]                                          # altitude of the different layers in [m]
+    param['fractionnalR0'        ] = [1.0]                                            # Cn2 profile
+    param['windSpeed'            ] = [20]                                          # wind speed of the different layers in [m.s-1]
+    param['windDirection'        ] = [90]                                            # wind direction of the different layers in [degrees]
+    param['altitude'             ] = [0]                                          # altitude of the different layers in [m]
                               
     ###%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% M1 PROPERTIES %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
     
-    param['diameter'             ] = 24                                             # diameter in [m]
+    param['diameter'             ] = 8                                             # diameter in [m]
     param['nSubaperture'         ] = 30                                             # number of PWFS subaperture along the telescope diameter
     param['nPixelPerSubap'       ] = 4                                           # sampling of the PWFS subapertures
     param['resolution'           ] = param['nSubaperture']*param['nPixelPerSubap']  # resolution of the telescope driven by the PWFS
@@ -38,7 +41,7 @@ def initializeParameterFile():
           
     ###%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% NGS PROPERTIES %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
     
-    param['magnitude'            ] = 14.0                                             # magnitude of the guide star
+    param['magnitude'            ] = 16.0                                             # magnitude of the guide star
     param['opticalBand'          ] = 'I'                                            # optical band of the guide star
     
     
@@ -79,7 +82,7 @@ def initializeParameterFile():
     param['photonNoise'           ] = True                                         # Photon Noise enable
     param['readoutNoise'          ] = 0                                            # Readout Noise value
     param['gainCL'                ] = 0.4                                          # integrator gain
-    param['nModes'                ] = 600                                          # number of KL modes controlled 
+    param['nModes'                ] = 700                                          # number of KL modes controlled
     param['nPhotonPerSubaperture' ] = 1000                                         # number of photons per subaperture (update of ngs.magnitude)
     param['getProjector'          ] = True                                         # modal projector too get modal coefficients of the turbulence and residual phase
 

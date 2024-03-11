@@ -133,7 +133,7 @@ class WFS_SIMU_VISU():
             parameters_to_use = parameters.copy()
             if len(reduce_lines) != 0:
                 parameters_to_use = [ elem for elem in parameters if elem not in reduce_lines]
-                to_plot = df.pivot_table(index=x, columns=parameters_to_use, values=y, aggfunc=aggfunc)
+                to_plot = df.pivot_table(index=x , columns=parameters_to_use, values=y, aggfunc=aggfunc )
 
 
         except ValueError as e:
@@ -142,6 +142,13 @@ class WFS_SIMU_VISU():
             print("Did you forget to use one?")
             print(e)
             exit(1)
+
+       
+        gin = df.groupby('gainCL').size().to_frame().rename(columns={0:'gainCL'})
+
+
+        print(to_plot)
+
 
 
         cycle_colors = plt.rcParams['axes.prop_cycle'].by_key()['color']
@@ -172,6 +179,10 @@ class WFS_SIMU_VISU():
                     subtitle += f" {conf}={self.traj[conf]},"
             ax.set_title(title+"\n"+subtitle)
 
+        #for k, v in to_plot.iterrows():
+        #    ax.annotate(k, v,  xytext=(10,-5), textcoords='offset points', family='sans-serif', fontsize=18, color='darkslategrey')
+        
+		
         lines = ax.get_lines()
         legend_title = f"({parameters_to_use} )"
         leg = ax.legend(title=legend_title)
@@ -354,14 +365,39 @@ class WFS_SIMU_VISU():
 
         self.traj.f_restore_default()
 
+
+    def show_specific_closed_loop4(self, mag, gain):
+
+        data_cl = {"Turbulence": [], "Residual Modulated": [],"Residual Custom": []}
+
+        filter_function  = lambda magnitude, gainCL: magnitude==mag and gainCL==gain
+        idx_iterator = self.traj.f_find_idx(['parameters.magnitude', 'parameters.gainCL'], filter_function)
+        for idx in idx_iterator:
+            self.traj.v_idx = idx
+            data_cl["Turbulence"] = self.traj.crun.Turbulence
+            if self.traj.modulation == 5 and self.traj.enable_custom_frames:
+                data_cl["Residual Custom"] = self.traj.crun.Residual
+            if self.traj.modulation == 5 and (not self.traj.enable_custom_frames):
+                data_cl["Residual Modulated"] = self.traj.crun.Residual
+
+        df_cl = pd.DataFrame.from_dict(data_cl)
+        ax = df_cl.plot()
+        ax.set_xlabel("Time (iterations)")
+        ax.set_ylabel("WFE (nm)")
+        ax.set_title(f"Closed-loop WFE through iterations.\nMagnitude={mag}, Gain={gain}")
+
+
+        self.traj.f_restore_default()
+
+
 if __name__ == "__main__":
 
     #WSV = WFS_SIMU_VISU("/media/simonc/Sagittarius/Programming/OOPAO_TRWFS/trwfs/sum/res/general_right_before_leaving_small_shortcut.hdf5")
-    WSV = WFS_SIMU_VISU("/mnt/home/usager/cars2019/Documents/Programming/OOPAO_TRWFS/trwfs/sum/res/sum_weight_1_8m_L01_30jan2024.hdf5")
+    WSV = WFS_SIMU_VISU("/mnt/home/usager/cars2019/Documents/Programming/OOPAO_TRWFS/trwfs/sum/res/r0_sweeping_09mar2024.hdf5")
     WSV.display_graph_parameters(x="photons_per_subArea",
                                  y="SR_H", #SR_H
-                                 remove_first=100,
-                                 parameters=["enable_custom_frames", "modulation", "gainCL"],
+                                 remove_first=1000,
+                                 parameters=[ "enable_custom_frames","modulation", "gainCL", "r0"],
                                  reduce_lines=["gainCL"],
                                  aggfunc=np.max,
                                  logx=True,
@@ -374,7 +410,7 @@ if __name__ == "__main__":
     #WSV.show_specific_closed_loop(mag=15.0, gain=0.1)
     # WSV.show_specific_closed_loop3(mag=16.5, gain=0.3)
     # WSV.show_specific_closed_loop3(mag=17.0, gain=0.3)
-    # WSV.show_specific_closed_loop3(mag=17.5, gain=0.3)
+    #WSV.show_specific_closed_loop4(mag=12.0, gain=0.4)
 
 
     plt.show()

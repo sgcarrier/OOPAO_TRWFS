@@ -61,14 +61,14 @@ def initializeParameterFile():
     
     ###%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% WFS PROPERTIES %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
     
-    param['modulation'            ] = 3                                             # modulation radius in ratio of wavelength over telescope diameter
+    param['modulation'            ] = 5                                             # modulation radius in ratio of wavelength over telescope diameter
     param['pupilSeparationRatio'  ] = 0.5                                           # separation ratio between the PWFS pupils
     param['psfCentering'          ] = False                                         # centering of the FFT and of the PWFS mask on the 4 central pixels
     param['calibrationModulation' ] = 20                                            # modulation radius used to select the valid pixels
     param['lightThreshold'        ] = 0.1                                           # light threshold to select the valid pixels
     param['edgePixel'             ] = 4                                             # number of pixel on the external edge of the PWFS pupils
     param['extraModulationFactor' ] = 4                                             # factor to add/remove 4 modulation points (one for each PWFS face)
-    param['nTheta_user_defined'   ] = 48*4                                            # Number for frames taken during the modulation. Must be a multiple of 4 for the pyramid
+    param['nTheta_user_defined'   ] = 48                                            # Number for frames taken during the modulation. Must be a multiple of 4 for the pyramid
     param['postProcessing'        ] = 'fullFrame'                                   # post-processing of the PWFS signals
     param['unitCalibration'       ] = False                                         # calibration of the PWFS units using a ramp of Tip/Tilt    
 

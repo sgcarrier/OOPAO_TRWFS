@@ -512,7 +512,8 @@ class Atmosphere:
     def generateNewPhaseScreen(self,seed = None):
         if seed is None:
             t = time.localtime()
-            seed = t.tm_hour*3600 + t.tm_min*60 + t.tm_sec
+            #seed = t.tm_hour*3600 + t.tm_min*60 + t.tm_sec
+            seed = 12345
         phase_support = self.initialize_phase_support()
         for i_layer in range(self.nLayer):
             tmpLayer=getattr(self,'layer_'+str(i_layer+1))

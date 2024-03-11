@@ -18,17 +18,19 @@ def initializeParameterFile():
 
     param['r0'                   ] = 0.186                                           # value of r0 in the visibile in [m]
     param['L0'                   ] = 30                                             # value of L0 in the visibile in [m]
-    param['fractionnalR0'        ] = [0.45,0.1,0.1,0.25,0.1]                                            # Cn2 profile
-    param['windSpeed'            ] = [10,12,11,15,20]                                          # wind speed of the different layers in [m.s-1]
-    param['windDirection'        ] = [0,72,144,216,288]                                            # wind direction of the different layers in [degrees]
-    param['altitude'             ] = [0, 1000,5000,10000,12000 ]                                          # altitude of the different layers in [m]
-    #param['altitude'             ] = [100, 100,100,100,100 ]                                          # altitude of the different layers in [m]
-
+    # param['fractionnalR0'        ] = [0.45,0.1,0.1,0.25,0.1]                                            # Cn2 profile
+    # param['windSpeed'            ] = [10,12,11,15,20]                                          # wind speed of the different layers in [m.s-1]
+    # param['windDirection'        ] = [0,72,144,216,288]                                            # wind direction of the different layers in [degrees]
+    # param['altitude'             ] = [0, 1000,5000,10000,12000 ]                                          # altitude of the different layers in [m]
+    param['fractionnalR0'] = [1.0]  # Cn2 profile
+    param['windSpeed'] = [10]  # wind speed of the different layers in [m.s-1]
+    param['windDirection'] = [0]  # wind direction of the different layers in [degrees]
+    param['altitude'] = [0]  # altitude of the different layers in [m]
 
     ###%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% M1 PROPERTIES %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
     param['diameter'             ] = 8#24                                             # diameter in [m]
-    param['nSubaperture'         ] = 30                                             # number of PWFS subaperture along the telescope diameter
+    param['nSubaperture'         ] = 40                                             # number of PWFS subaperture along the telescope diameter
     param['nPixelPerSubap'       ] = 4                                           # sampling of the PWFS subapertures
     param['resolution'           ] = param['nSubaperture']*param['nPixelPerSubap']  # resolution of the telescope driven by the PWFS
     param['sizeSubaperture'      ] = param['diameter']/param['nSubaperture']        # size of a sub-aperture projected in the M1 space
@@ -39,7 +41,7 @@ def initializeParameterFile():
 
     ###%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% NGS PROPERTIES %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-    param['magnitude'            ] = 10.0                                             # magnitude of the guide star
+    param['magnitude'            ] = 0.0                                             # magnitude of the guide star
     param['opticalBand'          ] = 'I'                                            # optical band of the guide star
 
 
@@ -65,9 +67,9 @@ def initializeParameterFile():
     param['modulation'            ] = 3                                             # modulation radius in ratio of wavelength over telescope diameter
     param['pupilSeparationRatio'  ] = 1.2                                           # separation ratio between the PWFS pupils
     param['psfCentering'          ] = False                                         # centering of the FFT and of the PWFS mask on the 4 central pixels
-    param['calibrationModulation' ] = 30                                            # modulation radius used to select the valid pixels
+    param['calibrationModulation' ] = 50                                            # modulation radius used to select the valid pixels
     param['lightThreshold'        ] = 0.1                                           # light threshold to select the valid pixels
-    param['edgePixel'             ] = 2                                             # number of pixel on the external edge of the PWFS pupils
+    param['edgePixel'             ] = 4                                             # number of pixel on the external edge of the PWFS pupils
     param['extraModulationFactor' ] = 4                                             # factor to add/remove 4 modulation points (one for each PWFS face)
     param['nTheta_user_defined'   ] = 48                                            # Number for frames taken during the modulation. Must be a multiple of 4 for the pyramid
     param['postProcessing'        ] = 'fullFrame'                                   # post-processing of the PWFS signals

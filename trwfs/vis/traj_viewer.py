@@ -12,7 +12,7 @@ import pandas as pd
 from pypet import Trajectory
 from mag_vs_residual_graph_traj import WFS_SIMU_VISU
 
-FILENAME = "/mnt/home/usager/cars2019/Documents/Programming/OOPAO_TRWFS/trwfs/sum/res/8m_L02_29jan2024.hdf5"
+FILENAME = "/mnt/home/usager/cars2019/Documents/Programming/OOPAO_TRWFS/trwfs/sum/res/20m_3_5mod_increased_subap_12feb2024.hdf5"
 
 
 results_to_display = ["SR_H", "Turbulence", "Residual", 'wfsSignal', 'OPD', 'a_est']
@@ -34,7 +34,7 @@ def fetch_data():
 
     selected_parameter_values = {el: WSV.traj[el] for el in parameters}
 
-    selected_parameter_values["parameters.enable_custom_frames"] = False
+    selected_parameter_values["parameters.enable_custom_frames"] = True
     selected_parameter_values["parameters.magnitude"] = 15.0
     selected_parameter_values["parameters.gainCL"] = 0.2
 
